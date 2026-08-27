@@ -11,7 +11,12 @@ def generate_strategy(
 
     declining = diagnosis[
         diagnosis["revenue_change"] < 0
-    ].head(3)
+    ].copy()
+
+    declining = declining.sort_values(
+        "revenue_change",
+        ascending=True
+    )
 
     top_theme = (
         max(themes, key=themes.get)
@@ -26,7 +31,7 @@ def generate_strategy(
     )
 
     # ============================================================
-    # ABSTAIN
+    # INSUFFICIENT HISTORY
     # ============================================================
 
     if signal_status == "INSUFFICIENT HISTORY":
@@ -40,7 +45,7 @@ def generate_strategy(
             "confidence": "LOW",
             "reason": (
                 "There is insufficient historical evidence to "
-                "establish whether the movement is unusual."
+                "determine whether the latest movement is unusual."
             ),
             "top_theme": top_theme,
             "top_theme_count": top_theme_count,
@@ -55,73 +60,187 @@ def generate_strategy(
 
     if signal_status == "NORMAL VARIATION":
 
-        recommendation = (
-            "Continue monitoring revenue and the leading "
-            "declining categories. Do not commit significant "
-            "resources to corrective action while the movement "
-            "remains within historical variation."
-        )
+        # Look for a meaningful category decline.
+        meaningful_declines = declining[
+            (
+                declining["previous_revenue"] > 0
+            )
+            &
+            (
+                declining["latest_orders"]
+                +
+                declining["previous_orders"]
+                >= 5
+            )
+        ]
 
-        reason = (
-            "The latest movement is not statistically unusual "
-            "relative to the historical baseline."
-        )
+        if meaningful_declines.empty:
 
-        confidence = "HIGH"
-        decision_status = "MONITOR"
+            recommendation = (
+                "Continue monitoring revenue and category "
+                "movements. The latest KPI change is within "
+                "historical variation, so no major corrective "
+                "action is recommended at this stage."
+            )
+
+            reason = (
+                "The latest revenue movement is not statistically "
+                "unusual and no sufficiently strong category-level "
+                "evidence supports immediate intervention."
+            )
+
+            decision_status = "MONITOR"
+
+        else:
+
+            top_category = meaningful_declines.iloc[0]
+
+            category_name = top_category[
+                "product_category_name"
+            ]
+
+            category_change = top_category[
+                "percentage_change"
+            ]
+
+            evidence_status = top_category[
+                "evidence_status"
+            ]
+
+            if evidence_status.startswith(
+                "DISCONTINUITY"
+            ):
+
+                recommendation = (
+                    f"Validate the {category_name} revenue "
+                    "discontinuity before taking corrective "
+                    "business action. Check inventory, catalog "
+                    "availability and order records first."
+                )
+
+                reason = (
+                    f"{category_name} shows a large category-level "
+                    "movement, but the pattern may represent a "
+                    "sales discontinuity or sparse observation "
+                    "rather than a confirmed business cause."
+                )
+
+                decision_status = "VALIDATE"
+
+            else:
+
+                recommendation = (
+                    f"Monitor {category_name} closely. Revenue "
+                    f"changed by {category_change:.1f}%, but the "
+                    "overall KPI movement remains within historical "
+                    "variation. Validate operational evidence "
+                    "before committing resources."
+                )
+
+                reason = (
+                    "The latest KPI movement is not statistically "
+                    "unusual, so category-level movements should "
+                    "be treated as investigation signals rather "
+                    "than confirmed causes."
+                )
+
+                decision_status = "MONITOR"
+
+        return {
+            "recommendation": recommendation,
+            "confidence": "MEDIUM",
+            "reason": reason,
+            "top_theme": top_theme,
+            "top_theme_count": top_theme_count,
+            "latest_month": latest_month,
+            "previous_month": previous_month,
+            "decision_status": decision_status
+        }
 
     # ============================================================
     # SIGNIFICANT CHANGE
     # ============================================================
 
+    meaningful_declines = declining[
+        declining["previous_revenue"] > 0
+    ].copy()
+
+    if meaningful_declines.empty:
+
+        recommendation = (
+            "Investigate the unusual revenue movement across "
+            "commercial and operational drivers before taking "
+            "corrective action."
+        )
+
+        reason = (
+            "Revenue movement is statistically unusual, but "
+            "category evidence does not identify a sufficiently "
+            "reliable single driver."
+        )
+
+        confidence = "MEDIUM"
+        decision_status = "INVESTIGATE"
+
     else:
 
-        if declining.empty:
+        top_category = meaningful_declines.iloc[0]
+
+        category_name = top_category[
+            "product_category_name"
+        ]
+
+        category_change = top_category[
+            "percentage_change"
+        ]
+
+        contribution = top_category.get(
+            "decline_contribution",
+            0
+        )
+
+        evidence_status = top_category[
+            "evidence_status"
+        ]
+
+        if evidence_status.startswith(
+            "DISCONTINUITY"
+        ):
 
             recommendation = (
-                "Investigate the revenue movement across "
-                "operational and commercial drivers before "
-                "taking corrective action."
+                f"Investigate the {category_name} revenue "
+                "discontinuity first. Validate inventory, "
+                "catalog availability and order records before "
+                "attributing the unusual KPI movement to customer "
+                "or product behavior."
             )
 
             reason = (
-                "Revenue movement is statistically unusual, "
-                "but no single declining category explains "
-                "the movement sufficiently."
+                "The overall KPI movement is statistically unusual, "
+                "but the leading category exhibits a potential "
+                "discontinuity. The evidence supports validation, "
+                "not causal attribution."
             )
 
             confidence = "MEDIUM"
-            decision_status = "INVESTIGATE"
+            decision_status = "VALIDATE"
 
         else:
 
-            top_category = declining.iloc[0][
-                "product_category_name"
-            ]
-
-            category_change = declining.iloc[0][
-                "percentage_change"
-            ]
-
-            contribution = declining.iloc[0].get(
-                "decline_contribution",
-                0
-            )
-
             recommendation = (
-                f"Investigate {top_category} first. "
-                f"Revenue declined by {category_change:.1f}% "
-                f"and this category contributes approximately "
+                f"Investigate {category_name} first. Revenue "
+                f"changed by {category_change:.1f}% and this "
+                f"category represents approximately "
                 f"{contribution:.1f}% of the observed category "
-                "decline. Review operational and customer "
+                "decline. Validate operational and customer "
                 "evidence before selecting a corrective lever."
             )
 
             reason = (
                 "The KPI movement is statistically unusual and "
-                "a specific category contributes materially to "
-                "the decline. Customer-review themes provide "
-                "supporting evidence, but do not establish causation."
+                "a category-level driver is visible. Customer "
+                "review themes may provide supporting evidence, "
+                "but they do not establish causation."
             )
 
             confidence = "HIGH"

@@ -1,6 +1,7 @@
 import time
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 
 from agents.signal_agent import detect_signal
 from agents.diagnostic_agent import diagnose_revenue_change
@@ -22,30 +23,23 @@ CASE_ID = "KPI-2026-08"
 
 
 # ============================================================
-# DESIGN TOKENS & STYLES
+# DESIGN TOKENS
 # ============================================================
 
-st.markdown("""
+st.markdown(
+    """
 <style>
 
 :root {
     --ink: #10162a;
-    --ink-2: #0d1222;
     --panel: #161d35;
     --panel-2: #1b2440;
-    --panel-3: #1f2847;
     --line: #2a3358;
-    --line-2: #3a4568;
     --paper: #e7dcc0;
-    --paper-2: #d4c9b0;
     --brick: #b0473a;
-    --brick-2: #c95647;
     --sage: #6a8f5c;
-    --sage-2: #7aa36a;
     --muted: #8a94b3;
     --text: #eef0f6;
-    --glow-brick: rgba(176, 71, 58, 0.15);
-    --glow-sage: rgba(106, 143, 92, 0.12);
 }
 
 html, body, [class*="css"] {
@@ -65,12 +59,12 @@ html, body, [class*="css"] {
             transparent 55%
         ),
         linear-gradient(
-            rgba(255, 255, 255, 0.015) 1px,
+            rgba(255,255,255,0.015) 1px,
             transparent 1px
         ),
         linear-gradient(
             90deg,
-            rgba(255, 255, 255, 0.015) 1px,
+            rgba(255,255,255,0.015) 1px,
             transparent 1px
         ),
         var(--ink);
@@ -103,7 +97,7 @@ html, body, [class*="css"] {
     background: linear-gradient(
         180deg,
         var(--paper),
-        var(--paper-2)
+        #d4c9b0
     );
     color: #2a2213;
     font-family: 'IBM Plex Mono', monospace;
@@ -112,7 +106,6 @@ html, body, [class*="css"] {
     letter-spacing: 1.5px;
     padding: 8px 16px;
     border-radius: 0 0 10px 10px;
-    margin-bottom: 0;
 }
 
 .hero {
@@ -124,7 +117,7 @@ html, body, [class*="css"] {
         var(--panel-2),
         var(--panel)
     );
-    padding: 32px 36px 30px 36px;
+    padding: 32px 36px;
     margin-bottom: 40px;
 }
 
@@ -132,8 +125,6 @@ html, body, [class*="css"] {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 32px;
     font-weight: 700;
-    letter-spacing: -0.5px;
-    margin-bottom: 6px;
     color: var(--text);
 }
 
@@ -146,7 +137,7 @@ html, body, [class*="css"] {
 
 
 /* ============================================================
-   SECTION HEADINGS
+   SECTIONS
    ============================================================ */
 
 .section-eyebrow {
@@ -157,14 +148,11 @@ html, body, [class*="css"] {
     color: var(--paper);
     text-transform: uppercase;
     margin-top: 36px;
-    margin-bottom: 2px;
 }
 
 .section-title {
     font-size: 20px;
     font-weight: 650;
-    margin-top: 2px;
-    margin-bottom: 4px;
     color: var(--text);
 }
 
@@ -182,12 +170,11 @@ html, body, [class*="css"] {
    ============================================================ */
 
 .card {
-    position: relative;
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 4px 10px 10px 10px;
     padding: 18px 20px;
-    height: 100%;
+    min-height: 110px;
 }
 
 .card-label {
@@ -227,8 +214,6 @@ html, body, [class*="css"] {
     border-left: 4px solid var(--brick);
     border-radius: 4px 10px 10px 4px;
     padding: 28px 32px;
-    margin-top: 8px;
-    margin-bottom: 8px;
 }
 
 .story-label {
@@ -254,7 +239,7 @@ html, body, [class*="css"] {
 
 
 /* ============================================================
-   AGENT
+   AGENTS
    ============================================================ */
 
 .agent {
@@ -311,7 +296,6 @@ html, body, [class*="css"] {
     letter-spacing: 1.5px;
     text-transform: uppercase;
     color: var(--sage);
-    margin-bottom: 10px;
 }
 
 .recommendation-text {
@@ -331,7 +315,7 @@ html, body, [class*="css"] {
 
 
 /* ============================================================
-   INVESTIGATION PANEL
+   INVESTIGATION
    ============================================================ */
 
 .investigation {
@@ -344,7 +328,6 @@ html, body, [class*="css"] {
     border-left: 4px solid var(--paper);
     border-radius: 4px 10px 10px 4px;
     padding: 26px 28px;
-    margin-top: 10px;
 }
 
 .investigation-title {
@@ -354,7 +337,6 @@ html, body, [class*="css"] {
     letter-spacing: 1.4px;
     color: var(--paper);
     text-transform: uppercase;
-    margin-bottom: 12px;
 }
 
 .investigation-value {
@@ -398,9 +380,6 @@ html, body, [class*="css"] {
     border-radius: 8px;
     padding: 16px 20px;
     margin-top: 18px;
-    display: flex;
-    gap: 14px;
-    align-items: flex-start;
 }
 
 .human-title {
@@ -410,34 +389,24 @@ html, body, [class*="css"] {
     letter-spacing: 1px;
     color: var(--paper);
     text-transform: uppercase;
-    white-space: nowrap;
 }
 
 .human-text {
     color: var(--muted);
     font-size: 13px;
     line-height: 1.5;
-}
-
-
-/* ============================================================
-   TABLE
-   ============================================================ */
-
-[data-testid="stDataFrame"] {
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    overflow: hidden;
-    background: var(--panel);
+    margin-top: 8px;
 }
 
 </style>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-
-""", unsafe_allow_html=True)
+<link
+href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+rel="stylesheet">
+""",
+    unsafe_allow_html=True
+)
 
 
 # ============================================================
@@ -463,14 +432,19 @@ def load_data():
         "data/olist_order_reviews_dataset.csv"
     )
 
-    return orders, items, products, reviews
+    return (
+        orders,
+        items,
+        products,
+        reviews
+    )
 
 
 orders, items, products, reviews = load_data()
 
 
 # ============================================================
-# DATA PREPARATION
+# PREPARE BASE DATA
 # ============================================================
 
 orders = orders.copy()
@@ -479,13 +453,23 @@ products = products.copy()
 reviews = reviews.copy()
 
 orders["order_purchase_timestamp"] = pd.to_datetime(
-    orders["order_purchase_timestamp"]
+    orders["order_purchase_timestamp"],
+    errors="coerce"
 )
+
+orders = orders.dropna(
+    subset=["order_purchase_timestamp"]
+).copy()
 
 orders["month"] = (
     orders["order_purchase_timestamp"]
     .dt.to_period("M")
 )
+
+items["price"] = pd.to_numeric(
+    items["price"],
+    errors="coerce"
+).fillna(0)
 
 
 # ============================================================
@@ -512,7 +496,7 @@ monthly_revenue = (
 
 
 # ============================================================
-# OTHER BUSINESS KPIs
+# OTHER KPIs
 # ============================================================
 
 monthly_orders = (
@@ -529,22 +513,37 @@ monthly_aov = monthly_revenue.merge(
 
 monthly_aov["aov"] = (
     monthly_aov["price"]
-    / monthly_aov["orders"].replace(0, pd.NA)
+    / monthly_aov["orders"].replace(
+        0,
+        pd.NA
+    )
 )
 
 
 # ============================================================
-# CUSTOMER RATING KPI
+# CUSTOMER RATING
 # ============================================================
 
 review_kpi = reviews.merge(
-    orders[["order_id", "month"]],
+    orders[
+        [
+            "order_id",
+            "month"
+        ]
+    ],
     on="order_id",
     how="inner"
 )
 
+review_kpi["review_score"] = pd.to_numeric(
+    review_kpi["review_score"],
+    errors="coerce"
+)
+
 monthly_rating = (
-    review_kpi.groupby("month")["review_score"]
+    review_kpi.groupby("month")[
+        "review_score"
+    ]
     .mean()
     .reset_index(name="avg_rating")
 )
@@ -560,13 +559,16 @@ signal = detect_signal(
     monthly_revenue
 )
 
-diagnosis, latest_month, previous_month, themes = (
-    diagnose_revenue_change(
-        orders,
-        items,
-        products,
-        reviews
-    )
+(
+    diagnosis,
+    latest_month,
+    previous_month,
+    themes
+) = diagnose_revenue_change(
+    orders,
+    items,
+    products,
+    reviews
 )
 
 strategy = generate_strategy(
@@ -578,20 +580,38 @@ strategy = generate_strategy(
 )
 
 pipeline_latency = (
-    time.perf_counter() - pipeline_start
+    time.perf_counter()
+    - pipeline_start
 )
 
 
 # ============================================================
-# LATEST KPI VALUES
+# IMPORTANT:
+# Align ALL UI with Signal Agent's latest COMPLETE month
+# ============================================================
+
+latest_signal_month = pd.Period(
+    signal["latest_month"],
+    freq="M"
+)
+
+previous_signal_month = (
+    latest_signal_month - 1
+)
+
+
+# ============================================================
+# LATEST REVENUE
 # ============================================================
 
 latest_revenue_row = monthly_revenue[
-    monthly_revenue["month"] == signal["latest_month"]
+    monthly_revenue["month"]
+    == latest_signal_month
 ]
 
 previous_revenue_row = monthly_revenue[
-    monthly_revenue["month"] == previous_month
+    monthly_revenue["month"]
+    == previous_signal_month
 ]
 
 latest_revenue = (
@@ -607,8 +627,13 @@ previous_revenue = (
 )
 
 
+# ============================================================
+# LATEST ORDERS
+# ============================================================
+
 latest_orders_row = monthly_orders[
-    monthly_orders["month"] == signal["latest_month"]
+    monthly_orders["month"]
+    == latest_signal_month
 ]
 
 latest_orders = (
@@ -617,6 +642,11 @@ latest_orders = (
     else 0
 )
 
+
+# ============================================================
+# LATEST AOV
+# ============================================================
+
 latest_aov = (
     latest_revenue / latest_orders
     if latest_orders > 0
@@ -624,48 +654,59 @@ latest_aov = (
 )
 
 
+# ============================================================
+# LATEST RATING
+# ============================================================
+
 latest_rating_row = monthly_rating[
-    monthly_rating["month"] == signal["latest_month"]
+    monthly_rating["month"]
+    == latest_signal_month
 ]
 
 latest_rating = (
-    latest_rating_row["avg_rating"].iloc[0]
+    latest_rating_row[
+        "avg_rating"
+    ].iloc[0]
     if not latest_rating_row.empty
     else None
 )
 
 
 # ============================================================
-# SIGNAL STATUS
+# SIGNAL
 # ============================================================
 
 signal_status = str(
     signal["signal"]
 ).strip().upper()
 
-is_alert = (
-    signal_status == "SIGNIFICANT CHANGE"
-)
-
 
 # ============================================================
-# DATA QUALITY / CONFIDENCE
+# DIAGNOSTIC CONFIDENCE
 # ============================================================
 
 diagnosis_valid = diagnosis[
     diagnosis["previous_revenue"] > 0
 ].copy()
 
-declining_categories = diagnosis_valid[
-    diagnosis_valid["revenue_change"] < 0
+meaningful_categories = diagnosis[
+    (
+        diagnosis["previous_revenue"] > 0
+    )
+    &
+    (
+        diagnosis["previous_orders"]
+        +
+        diagnosis["latest_orders"]
+        >= 5
+    )
 ].copy()
-
 
 if len(diagnosis_valid) == 0:
 
     evidence_confidence = "LOW"
 
-elif len(declining_categories) < 2:
+elif len(meaningful_categories) < 2:
 
     evidence_confidence = "MEDIUM"
 
@@ -680,23 +721,23 @@ else:
 
 st.markdown(
     f"""
-    <div class="case-tab">
-        📁 CASE FILE No. {CASE_ID}
-    </div>
+<div class="case-tab">
+📁 CASE FILE No. {CASE_ID}
+</div>
 
-    <div class="hero">
+<div class="hero">
 
-        <div class="hero-title">
-            KPI Storytelling Engine
-        </div>
+<div class="hero-title">
+KPI Storytelling Engine
+</div>
 
-        <div class="hero-subtitle">
-            From signal → evidence → explanation → action —
-            with uncertainty and human accountability built in.
-        </div>
+<div class="hero-subtitle">
+From signal → evidence → explanation → action —
+with uncertainty and human accountability built in.
+</div>
 
-    </div>
-    """,
+</div>
+""",
     unsafe_allow_html=True
 )
 
@@ -707,25 +748,24 @@ st.markdown(
 
 c1, c2, c3, c4 = st.columns(4)
 
-
 with c1:
 
     st.markdown(
         f"""
-        <div class="card">
-            <div class="card-label">
-                LATEST REVENUE
-            </div>
+<div class="card">
+<div class="card-label">
+LATEST COMPLETE REVENUE
+</div>
 
-            <div class="card-value">
-                ₹{latest_revenue:,.0f}
-            </div>
+<div class="card-value">
+₹{latest_revenue:,.0f}
+</div>
 
-            <div class="card-sub">
-                {signal["latest_month"]}
-            </div>
-        </div>
-        """,
+<div class="card-sub">
+{latest_signal_month}
+</div>
+</div>
+""",
         unsafe_allow_html=True
     )
 
@@ -734,20 +774,20 @@ with c2:
 
     st.markdown(
         f"""
-        <div class="card">
-            <div class="card-label">
-                REVENUE CHANGE
-            </div>
+<div class="card">
+<div class="card-label">
+REVENUE CHANGE
+</div>
 
-            <div class="card-value">
-                {signal["latest_change"]:.2f}%
-            </div>
+<div class="card-value">
+{signal["latest_change"]:.2f}%
+</div>
 
-            <div class="card-sub">
-                {previous_month} → {signal["latest_month"]}
-            </div>
-        </div>
-        """,
+<div class="card-sub">
+{previous_signal_month} → {latest_signal_month}
+</div>
+</div>
+""",
         unsafe_allow_html=True
     )
 
@@ -756,20 +796,20 @@ with c3:
 
     st.markdown(
         f"""
-        <div class="card">
-            <div class="card-label">
-                ORDERS
-            </div>
+<div class="card">
+<div class="card-label">
+ORDERS
+</div>
 
-            <div class="card-value">
-                {latest_orders:,.0f}
-            </div>
+<div class="card-value">
+{latest_orders:,.0f}
+</div>
 
-            <div class="card-sub">
-                latest complete period
-            </div>
-        </div>
-        """,
+<div class="card-sub">
+latest complete period
+</div>
+</div>
+""",
         unsafe_allow_html=True
     )
 
@@ -784,20 +824,20 @@ with c4:
 
     st.markdown(
         f"""
-        <div class="card">
-            <div class="card-label">
-                CUSTOMER RATING
-            </div>
+<div class="card">
+<div class="card-label">
+CUSTOMER RATING
+</div>
 
-            <div class="card-value">
-                {rating_text}
-            </div>
+<div class="card-value">
+{rating_text}
+</div>
 
-            <div class="card-sub">
-                average review score
-            </div>
-        </div>
-        """,
+<div class="card-sub">
+average review score
+</div>
+</div>
+""",
         unsafe_allow_html=True
     )
 
@@ -807,29 +847,56 @@ with c4:
 # ============================================================
 
 st.markdown(
-    '<div class="section-eyebrow">Case Summary</div>'
-    '<div class="section-title">📖 Executive Story</div>'
-    '<div class="section-caption">'
-    'A deterministic analytical chain converts the KPI movement '
-    'into an evidence-backed narrative.'
-    '</div>',
+    """
+<div class="section-eyebrow">
+Case Summary
+</div>
+
+<div class="section-title">
+📖 Executive Story
+</div>
+
+<div class="section-caption">
+A deterministic evidence chain converts KPI movement into
+an investigation-ready narrative.
+</div>
+""",
     unsafe_allow_html=True
 )
 
 
-if not declining_categories.empty:
+# ============================================================
+# TOP CATEGORY
+# ============================================================
 
-    top_category_row = (
-        declining_categories.iloc[0]
-    )
+declining_categories = diagnosis[
+    diagnosis["revenue_change"] < 0
+].copy()
 
-    top_category = (
-        top_category_row["product_category_name"]
-    )
+meaningful_declines = declining_categories[
+    declining_categories["previous_revenue"] > 0
+].copy()
 
-    top_category_change = (
-        top_category_row["percentage_change"]
-    )
+meaningful_declines = meaningful_declines.sort_values(
+    "revenue_change"
+)
+
+
+if not meaningful_declines.empty:
+
+    top_category_row = meaningful_declines.iloc[0]
+
+    top_category = top_category_row[
+        "product_category_name"
+    ]
+
+    top_category_change = top_category_row[
+        "percentage_change"
+    ]
+
+    top_category_status = top_category_row[
+        "evidence_status"
+    ]
 
 else:
 
@@ -839,6 +906,12 @@ else:
 
     top_category_change = 0
 
+    top_category_status = "NONE"
+
+
+# ============================================================
+# TOP THEME
+# ============================================================
 
 top_theme = (
     max(themes, key=themes.get)
@@ -847,51 +920,66 @@ top_theme = (
 )
 
 
+# ============================================================
+# STORY
+# ============================================================
+
 story = (
     f"Revenue changed by "
     f"<b>{signal['latest_change']:.2f}%</b> "
-    f"in {signal['latest_month']}. "
+    f"in <b>{latest_signal_month}</b>. "
     f"The Signal Agent classifies this as "
     f"<b>{signal['signal'].lower()}</b>. "
 )
 
 
-if not declining_categories.empty:
+if not meaningful_declines.empty:
 
     story += (
-        f"The largest category-level decline is "
-        f"<b>{top_category}</b>, down "
+        f"The largest observed category movement is "
+        f"<b>{top_category}</b>, at "
         f"<b>{top_category_change:.1f}%</b>. "
     )
 
+    if top_category_status.startswith(
+        "DISCONTINUITY"
+    ):
+
+        story += (
+            "However, this category shows a potential "
+            "<b>sales discontinuity</b>, so the movement "
+            "should be validated before being treated as "
+            "a business cause. "
+        )
+
 
 story += (
-    f"Across the available customer feedback, "
-    f"<b>{top_theme.lower()}</b> is the leading review theme. "
+    f"Across the available negative customer feedback, "
+    f"<b>{top_theme.lower()}</b> is the leading theme. "
     f"This is evidence for investigation, not proof of causation."
 )
 
 
 st.markdown(
     f"""
-    <div class="story">
+<div class="story">
 
-        <div class="story-label">
-            Filed Evidence — Read Before Acting
-        </div>
+<div class="story-label">
+Filed Evidence — Read Before Acting
+</div>
 
-        <div class="story-text">
-            {story}
-        </div>
+<div class="story-text">
+{story}
+</div>
 
-    </div>
-    """,
+</div>
+""",
     unsafe_allow_html=True
 )
 
 
 # ============================================================
-# CONFIDENCE / ABSTENTION
+# CONFIDENCE
 # ============================================================
 
 if evidence_confidence == "LOW":
@@ -905,34 +993,45 @@ if evidence_confidence == "LOW":
 elif evidence_confidence == "MEDIUM":
 
     st.info(
-        "MEDIUM CONFIDENCE — A category movement is visible, "
-        "but the available evidence does not establish causality."
+        "MEDIUM CONFIDENCE — Category-level evidence exists, "
+        "but data coverage or comparability limits causal "
+        "interpretation."
     )
 
 else:
 
     st.success(
-        "HIGH EVIDENCE COVERAGE — Multiple category movements "
-        "are available for comparison. Causality still requires validation."
+        "HIGH EVIDENCE COVERAGE — Multiple comparable category "
+        "movements are available. Causality still requires "
+        "business validation."
     )
 
 
 # ============================================================
-# EXHIBIT A — REVENUE TREND
+# EXHIBIT A
 # ============================================================
 
 st.markdown(
-    '<div class="section-eyebrow">Exhibit A</div>'
-    '<div class="section-title">📈 Revenue Trend</div>'
-    '<div class="section-caption">'
-    'Completed monthly periods used by the Signal Agent.'
-    '</div>',
+    """
+<div class="section-eyebrow">
+Exhibit A
+</div>
+
+<div class="section-title">
+📈 Revenue Trend
+</div>
+
+<div class="section-caption">
+Completed monthly periods used by the Signal Agent.
+</div>
+""",
     unsafe_allow_html=True
 )
 
 
 chart_data = monthly_revenue[
-    monthly_revenue["month"] <= signal["latest_month"]
+    monthly_revenue["month"]
+    <= latest_signal_month
 ].copy()
 
 chart_data["month"] = (
@@ -940,7 +1039,9 @@ chart_data["month"] = (
 )
 
 chart_data = chart_data.rename(
-    columns={"price": "Revenue (₹)"}
+    columns={
+        "price": "Revenue (₹)"
+    }
 )
 
 chart_data = chart_data.set_index(
@@ -963,52 +1064,63 @@ left, right = st.columns(2)
 with left:
 
     st.markdown(
-        '<div class="section-eyebrow">Exhibit B</div>'
-        '<div class="section-title">🔎 Signal Agent</div>',
+        """
+<div class="section-eyebrow">
+Exhibit B
+</div>
+
+<div class="section-title">
+🔎 Signal Agent
+</div>
+""",
         unsafe_allow_html=True
     )
 
     st.markdown(
         f"""
-        <div class="agent">
+<div class="agent">
 
-            <div class="exhibit-tag">
-                STATISTICAL TEST
-            </div>
+<div class="exhibit-tag">
+STATISTICAL TEST
+</div>
 
-            <div class="agent-name">
-                Is the movement statistically unusual?
-            </div>
+<div class="agent-name">
+Is the movement statistically unusual?
+</div>
 
-            <div class="agent-text">
+<div class="agent-text">
 
-                <b>Latest change:</b>
-                {signal["latest_change"]:.2f}%
+<b>Latest complete month:</b>
+{signal["latest_month"]}
+<br><br>
 
-                <br><br>
+<b>Latest change:</b>
+{signal["latest_change"]:.2f}%
+<br><br>
 
-                <b>Historical mean:</b>
-                {signal["historical_mean"]:.2f}%
+<b>Historical mean:</b>
+{signal["historical_mean"]:.2f}%
+<br><br>
 
-                <br><br>
+<b>Historical standard deviation:</b>
+{signal["historical_std"]:.2f}
+<br><br>
 
-                <b>Historical standard deviation:</b>
-                {signal["historical_std"]:.2f}
+<b>Z-score:</b>
+{signal["z_score"]:.2f}
+<br><br>
 
-                <br><br>
+<b>Historical observations:</b>
+{signal["historical_periods"]}
+<br><br>
 
-                <b>Z-score:</b>
-                {signal["z_score"]:.2f}
+<b>Verdict:</b>
+{signal["signal"]}
 
-                <br><br>
+</div>
 
-                <b>Verdict:</b>
-                {signal["signal"]}
-
-            </div>
-
-        </div>
-        """,
+</div>
+""",
         unsafe_allow_html=True
     )
 
@@ -1016,8 +1128,15 @@ with left:
 with right:
 
     st.markdown(
-        '<div class="section-eyebrow">Exhibit C</div>'
-        '<div class="section-title">💬 Customer Voice</div>',
+        """
+<div class="section-eyebrow">
+Exhibit C
+</div>
+
+<div class="section-title">
+💬 Customer Voice
+</div>
+""",
         unsafe_allow_html=True
     )
 
@@ -1049,16 +1168,24 @@ with right:
 
 
 # ============================================================
-# EXHIBIT D — DIAGNOSTIC AGENT
+# EXHIBIT D
 # ============================================================
 
 st.markdown(
-    '<div class="section-eyebrow">Exhibit D</div>'
-    '<div class="section-title">🧠 Diagnostic Agent</div>'
-    f'<div class="section-caption">'
-    f'Category-level revenue contribution: '
-    f'{previous_month} → {latest_month}.'
-    f'</div>',
+    f"""
+<div class="section-eyebrow">
+Exhibit D
+</div>
+
+<div class="section-title">
+🧠 Diagnostic Agent
+</div>
+
+<div class="section-caption">
+Category-level revenue evidence:
+{previous_month} → {latest_month}.
+</div>
+""",
     unsafe_allow_html=True
 )
 
@@ -1069,9 +1196,11 @@ display_data = diagnosis[
         "latest_revenue",
         "previous_revenue",
         "revenue_change",
-        "percentage_change"
+        "percentage_change",
+        "decline_contribution",
+        "evidence_status"
     ]
-].head(10).copy()
+].head(12).copy()
 
 
 display_data.columns = [
@@ -1079,33 +1208,48 @@ display_data.columns = [
     "Latest Revenue",
     "Previous Revenue",
     "Revenue Change",
-    "% Change"
+    "% Change",
+    "Decline Contribution",
+    "Evidence Status"
 ]
 
 
 def color_change(value):
 
-    if value < 0:
+    try:
+
+        if float(value) < 0:
+            return (
+                "color: #e08a7d; "
+                "font-weight: 600;"
+            )
 
         return (
-            "color: #e08a7d; "
+            "color: #9dc191; "
             "font-weight: 600;"
         )
 
-    return (
-        "color: #9dc191; "
-        "font-weight: 600;"
-    )
+    except Exception:
+
+        return ""
 
 
 styled_table = (
     display_data.style
-    .format({
-        "Latest Revenue": "₹{:,.0f}",
-        "Previous Revenue": "₹{:,.0f}",
-        "Revenue Change": "₹{:,.0f}",
-        "% Change": "{:.1f}%"
-    })
+    .format(
+        {
+            "Latest Revenue": "₹{:,.0f}",
+            "Previous Revenue": "₹{:,.0f}",
+            "Revenue Change": "₹{:,.0f}",
+            "% Change": (
+                lambda x:
+                "N/A"
+                if pd.isna(x)
+                else f"{x:.1f}%"
+            ),
+            "Decline Contribution": "{:.1f}%"
+        }
+    )
     .map(
         color_change,
         subset=[
@@ -1118,28 +1262,38 @@ styled_table = (
 
 st.dataframe(
     styled_table,
-    use_container_width=True,
+    width="stretch",
     hide_index=True
 )
 
 
 # ============================================================
-# INVESTIGATE CATEGORY
+# DECISION WORKSPACE
 # ============================================================
 
 st.markdown(
-    '<div class="section-eyebrow">Decision Workspace</div>'
-    '<div class="section-title">🔬 Investigate a Category</div>'
-    '<div class="section-caption">'
-    'Move from the aggregate KPI to a specific business driver '
-    'without inventing causal relationships.'
-    '</div>',
+    """
+<div class="section-eyebrow">
+Decision Workspace
+</div>
+
+<div class="section-title">
+🔬 Investigate a Category
+</div>
+
+<div class="section-caption">
+Move from aggregate KPI movement to a specific business
+driver without inventing causal relationships.
+</div>
+""",
     unsafe_allow_html=True
 )
 
 
 available_categories = (
-    diagnosis["product_category_name"]
+    diagnosis[
+        "product_category_name"
+    ]
     .dropna()
     .astype(str)
     .tolist()
@@ -1148,10 +1302,8 @@ available_categories = (
 
 if available_categories:
 
-    # Default to the largest declining category
     declining_names = (
-        declining_categories
-        .sort_values("revenue_change")[
+        meaningful_declines[
             "product_category_name"
         ]
         .astype(str)
@@ -1176,145 +1328,113 @@ if available_categories:
         index=default_index
     )
 
-
     selected_rows = diagnosis[
-        diagnosis["product_category_name"]
+        diagnosis[
+            "product_category_name"
+        ]
         == selected_category
     ]
 
-
     if not selected_rows.empty:
 
-        selected = (
-            selected_rows.iloc[0]
-        )
+        selected = selected_rows.iloc[0]
 
-        selected_latest = (
-            selected["latest_revenue"]
-        )
-
-        selected_previous = (
-            selected["previous_revenue"]
-        )
-
-        selected_change = (
-            selected["revenue_change"]
-        )
-
-        selected_pct = (
-            selected["percentage_change"]
-        )
-
-
-        category_rank = (
-            diagnosis_valid[
-                diagnosis_valid["revenue_change"] < 0
-            ]
-            .sort_values("revenue_change")
-            .reset_index(drop=True)
-        )
-
-
-        rank_matches = category_rank[
-            category_rank[
-                "product_category_name"
-            ] == selected_category
+        selected_latest = selected[
+            "latest_revenue"
         ]
 
+        selected_previous = selected[
+            "previous_revenue"
+        ]
 
-        if not rank_matches.empty:
+        selected_change = selected[
+            "revenue_change"
+        ]
 
-            decline_rank = (
-                rank_matches.index[0] + 1
-            )
+        selected_pct = selected[
+            "percentage_change"
+        ]
 
-        else:
+        selected_status = selected[
+            "evidence_status"
+        ]
 
-            decline_rank = None
+        selected_contribution = selected[
+            "decline_contribution"
+        ]
 
-
-        # Revenue contribution to total decline
-
-        total_decline = abs(
-            declining_categories[
-                "revenue_change"
-            ].sum()
+        decline_rank = selected.get(
+            "decline_rank",
+            pd.NA
         )
 
+        if pd.isna(decline_rank):
 
-        if (
-            selected_change < 0
-            and total_decline > 0
-        ):
-
-            contribution = (
-                abs(selected_change)
-                / total_decline
-                * 100
-            )
+            rank_display = "—"
 
         else:
 
-            contribution = 0
+            rank_display = (
+                f"#{int(decline_rank)}"
+            )
 
+        # --------------------------------------------------------
+        # Investigation
+        # --------------------------------------------------------
 
         st.markdown(
             '<div class="investigation">',
             unsafe_allow_html=True
         )
 
-
         st.markdown(
-            f'<div class="investigation-title">'
-            f'Category Investigation — '
-            f'{selected_category}'
-            f'</div>',
+            f"""
+<div class="investigation-title">
+Category Investigation — {selected_category}
+</div>
+""",
             unsafe_allow_html=True
         )
 
-
         m1, m2, m3, m4 = st.columns(4)
-
 
         with m1:
 
             st.markdown(
                 f"""
-                <div class="evidence-box">
+<div class="evidence-box">
 
-                    <div class="evidence-label">
-                        Latest Revenue
-                    </div>
+<div class="evidence-label">
+Latest Revenue
+</div>
 
-                    <div class="investigation-value">
-                        ₹{selected_latest:,.0f}
-                    </div>
+<div class="investigation-value">
+₹{selected_latest:,.0f}
+</div>
 
-                </div>
-                """,
+</div>
+""",
                 unsafe_allow_html=True
             )
-
 
         with m2:
 
             st.markdown(
                 f"""
-                <div class="evidence-box">
+<div class="evidence-box">
 
-                    <div class="evidence-label">
-                        Revenue Change
-                    </div>
+<div class="evidence-label">
+Revenue Change
+</div>
 
-                    <div class="investigation-value">
-                        ₹{selected_change:,.0f}
-                    </div>
+<div class="investigation-value">
+₹{selected_change:,.0f}
+</div>
 
-                </div>
-                """,
+</div>
+""",
                 unsafe_allow_html=True
             )
-
 
         with m3:
 
@@ -1326,145 +1446,156 @@ if available_categories:
 
             st.markdown(
                 f"""
-                <div class="evidence-box">
+<div class="evidence-box">
 
-                    <div class="evidence-label">
-                        % Change
-                    </div>
+<div class="evidence-label">
+% Change
+</div>
 
-                    <div class="investigation-value">
-                        {pct_display}
-                    </div>
+<div class="investigation-value">
+{pct_display}
+</div>
 
-                </div>
-                """,
+</div>
+""",
                 unsafe_allow_html=True
             )
-
 
         with m4:
 
-            rank_display = (
-                f"#{decline_rank}"
-                if decline_rank is not None
-                else "—"
-            )
-
             st.markdown(
                 f"""
-                <div class="evidence-box">
+<div class="evidence-box">
 
-                    <div class="evidence-label">
-                        Decline Rank
-                    </div>
+<div class="evidence-label">
+Decline Rank
+</div>
 
-                    <div class="investigation-value">
-                        {rank_display}
-                    </div>
+<div class="investigation-value">
+{rank_display}
+</div>
 
-                </div>
-                """,
+</div>
+""",
                 unsafe_allow_html=True
             )
-
 
         st.markdown(
             "<br>",
             unsafe_allow_html=True
         )
 
-
         e1, e2 = st.columns(2)
-
 
         with e1:
 
             st.markdown(
                 f"""
-                <div class="evidence-box">
+<div class="evidence-box">
 
-                    <div class="evidence-label">
-                        Evidence
-                    </div>
+<div class="evidence-label">
+Evidence
+</div>
 
-                    <div class="evidence-text">
+<div class="evidence-text">
 
-                        <b>Revenue:</b>
-                        ₹{selected_previous:,.0f}
-                        → ₹{selected_latest:,.0f}
+<b>Revenue:</b>
+₹{selected_previous:,.0f}
+→
+₹{selected_latest:,.0f}
 
-                        <br><br>
+<br><br>
 
-                        <b>Absolute impact:</b>
-                        ₹{selected_change:,.0f}
+<b>Absolute impact:</b>
+₹{selected_change:,.0f}
 
-                        <br><br>
+<br><br>
 
-                        <b>Share of category decline:</b>
-                        {contribution:.1f}%
+<b>Share of observed category decline:</b>
+{selected_contribution:.1f}%
 
-                        <br><br>
+<br><br>
 
-                        <b>Customer voice:</b>
-                        {top_theme}
+<b>Previous orders:</b>
+{int(selected["previous_orders"]):,}
 
-                    </div>
+<br><br>
 
-                </div>
-                """,
+<b>Latest orders:</b>
+{int(selected["latest_orders"]):,}
+
+<br><br>
+
+<b>Evidence status:</b>
+{selected_status}
+
+</div>
+
+</div>
+""",
                 unsafe_allow_html=True
             )
 
-
         with e2:
 
-            if selected_change < 0:
+            if selected_status.startswith(
+                "DISCONTINUITY"
+            ):
+
+                next_step = (
+                    f"{selected_category} shows a large "
+                    "revenue discontinuity. Validate inventory, "
+                    "catalog availability and order records "
+                    "before attributing the movement to customer "
+                    "or product behavior."
+                )
+
+            elif selected_change < 0:
 
                 next_step = (
                     f"Investigate {selected_category} first. "
-                    "Validate whether product, order or delivery "
-                    "issues are contributing before taking corrective action."
+                    "Validate product, order and delivery evidence "
+                    "before taking corrective action."
                 )
 
             else:
 
                 next_step = (
-                    f"{selected_category} is not currently a "
-                    "declining category. Do not treat it as the "
-                    "primary cause of the revenue movement."
+                    f"{selected_category} is not currently "
+                    "a declining category and should not be "
+                    "treated as the primary driver."
                 )
-
 
             st.markdown(
                 f"""
-                <div class="evidence-box">
+<div class="evidence-box">
 
-                    <div class="evidence-label">
-                        Recommended Next Step
-                    </div>
+<div class="evidence-label">
+Recommended Next Step
+</div>
 
-                    <div class="evidence-text">
+<div class="evidence-text">
 
-                        {next_step}
+{next_step}
 
-                        <br><br>
+<br><br>
 
-                        <b>Important:</b>
-                        Customer-review themes are measured across "
-                        "the available review population. The current "
-                        "pipeline does not establish a category-specific "
-                        "causal relationship.
+<b>Important:</b>
 
-                    </div>
+Customer-review themes are measured across the available "
+"review population. They are not currently linked to this "
+"category, so the pipeline does not establish a "
+"category-specific causal relationship.
 
-                </div>
-                """,
+</div>
+
+</div>
+""",
                 unsafe_allow_html=True
             )
 
-
         st.markdown(
-            '</div>',
+            "</div>",
             unsafe_allow_html=True
         )
 
@@ -1474,46 +1605,63 @@ if available_categories:
 # ============================================================
 
 st.markdown(
-    '<div class="section-eyebrow">Exhibit E</div>'
-    '<div class="section-title">🎯 Strategist Agent</div>',
+    """
+<div class="section-eyebrow">
+Exhibit E
+</div>
+
+<div class="section-title">
+🎯 Strategist Agent
+</div>
+""",
     unsafe_allow_html=True
 )
 
 
 st.markdown(
     f"""
-    <div class="recommendation">
+<div class="recommendation">
 
-        <div class="recommendation-title">
-            Recommended Next Step
-        </div>
+<div class="recommendation-title">
+Recommended Next Step
+</div>
 
-        <div class="recommendation-text">
-            {strategy["recommendation"]}
-        </div>
+<div class="recommendation-text">
+{strategy["recommendation"]}
+</div>
 
-        <br>
+<br>
 
-        <span class="meta-label">
-            Why
-        </span>
+<span class="meta-label">
+Why
+</span>
 
-        <br>
+<br>
 
-        {strategy["reason"]}
+{strategy["reason"]}
 
-        <br><br>
+<br><br>
 
-        <span class="meta-label">
-            Confidence
-        </span>
+<span class="meta-label">
+Confidence
+</span>
 
-        <br>
+<br>
 
-        {strategy["confidence"]}
+{strategy["confidence"]}
 
-    </div>
-    """,
+<br><br>
+
+<span class="meta-label">
+Decision Status
+</span>
+
+<br>
+
+{strategy["decision_status"]}
+
+</div>
+""",
     unsafe_allow_html=True
 )
 
@@ -1523,16 +1671,20 @@ st.markdown(
 # ============================================================
 
 st.markdown(
-    '<div class="section-eyebrow">'
-    'Personalized Intelligence'
-    '</div>'
-    '<div class="section-title">'
-    '👥 Same Evidence, Different Decision Context'
-    '</div>'
-    '<div class="section-caption">'
-    'The analytical truth stays fixed while the narrative changes '
-    'according to decision rights.'
-    '</div>',
+    """
+<div class="section-eyebrow">
+Personalized Intelligence
+</div>
+
+<div class="section-title">
+👥 Same Evidence, Different Decision Context
+</div>
+
+<div class="section-caption">
+The analytical evidence stays fixed while the narrative
+changes according to decision rights.
+</div>
+""",
     unsafe_allow_html=True
 )
 
@@ -1552,104 +1704,112 @@ if persona == "Executive":
     executive_text = (
         f"Revenue moved "
         f"{signal['latest_change']:.1f}% in "
-        f"{signal['latest_month']} and the movement is classified "
-        f"as {signal['signal'].lower()}. "
+        f"{latest_signal_month} and the movement is "
+        f"classified as {signal['signal'].lower()}. "
     )
 
-
-    if not declining_categories.empty:
+    if not meaningful_declines.empty:
 
         executive_text += (
-            f"The largest declining category is "
-            f"{top_category}, down "
+            f"The largest observed category movement is "
+            f"{top_category}, at "
             f"{top_category_change:.1f}%. "
         )
 
-
     executive_text += (
-        "The recommended decision is to investigate the leading "
-        "driver before committing pricing, inventory or "
-        "promotional resources."
+        "The recommended decision is to validate the "
+        "leading evidence before committing pricing, "
+        "inventory or promotional resources."
     )
-
 
     st.markdown(
         f"""
-        <div class="agent">
+<div class="agent">
 
-            <div class="exhibit-tag">
-                EXECUTIVE VIEW
-            </div>
+<div class="exhibit-tag">
+EXECUTIVE VIEW
+</div>
 
-            <div class="agent-name">
-                What does leadership need to know?
-            </div>
+<div class="agent-name">
+What does leadership need to know?
+</div>
 
-            <div class="agent-text">
-                {executive_text}
-            </div>
+<div class="agent-text">
+{executive_text}
+</div>
 
-        </div>
-        """,
+</div>
+""",
         unsafe_allow_html=True
     )
-
 
 else:
 
     analyst_text = (
-        f"Signal z-score: {signal['z_score']:.2f}. "
-        f"Latest change: {signal['latest_change']:.2f}%. "
-        f"Historical mean: {signal['historical_mean']:.2f}%. "
+        f"Signal z-score: "
+        f"{signal['z_score']:.2f}. "
+        f"Latest change: "
+        f"{signal['latest_change']:.2f}%. "
+        f"Historical mean: "
+        f"{signal['historical_mean']:.2f}%. "
         f"Diagnostic evidence contains "
-        f"{len(diagnosis_valid)} comparable categories. "
-        f"Review evidence is currently summarized at aggregate "
-        f"theme level."
+        f"{len(diagnosis_valid)} categories with "
+        "previous-period revenue. "
+        "Review evidence is summarized at aggregate "
+        "theme level."
     )
-
 
     st.markdown(
         f"""
-        <div class="agent">
+<div class="agent">
 
-            <div class="exhibit-tag">
-                ANALYST VIEW
-            </div>
+<div class="exhibit-tag">
+ANALYST VIEW
+</div>
 
-            <div class="agent-name">
-                What should be validated?
-            </div>
+<div class="agent-name">
+What should be validated?
+</div>
 
-            <div class="agent-text">
+<div class="agent-text">
 
-                {analyst_text}
+{analyst_text}
 
-                <br><br>
+<br><br>
 
-                <b>Suggested validation:</b>
-                Examine category-level order volume,
-                fulfillment performance, pricing/mix and review
-                evidence before asserting causality.
+<b>Suggested validation:</b>
 
-            </div>
+Examine category-level order volume,
+fulfillment performance, pricing/mix and
+review evidence before asserting causality.
 
-        </div>
-        """,
+</div>
+
+</div>
+""",
         unsafe_allow_html=True
     )
 
 
 # ============================================================
-# DATA LINEAGE / SEMANTIC CONTRACT
+# GOVERNANCE
 # ============================================================
 
 st.markdown(
-    '<div class="section-eyebrow">Governance</div>'
-    '<div class="section-title">🧾 KPI Contract & Lineage</div>'
-    '<div class="section-caption">'
-    'Every insight begins with deterministic data transformations '
-    'before narrative generation.'
-    '</div>',
+    """
+<div class="section-eyebrow">
+Governance
+</div>
+
+<div class="section-title">
+🧾 KPI Contract & Lineage
+</div>
+
+<div class="section-caption">
+Every insight begins with deterministic transformations
+before the agent layer organizes the evidence.
+</div>
+""",
     unsafe_allow_html=True
 )
 
@@ -1691,6 +1851,12 @@ lineage_df = pd.DataFrame(
             "Latest vs previous category revenue",
             "Orders + Items + Products",
             "Contribution analysis"
+        ],
+        [
+            "Customer Voice",
+            "Negative review keyword themes",
+            "Reviews",
+            "Deterministic text classification"
         ]
     ],
     columns=[
@@ -1704,78 +1870,115 @@ lineage_df = pd.DataFrame(
 
 st.dataframe(
     lineage_df,
-    use_container_width=True,
+    width="stretch",
     hide_index=True
 )
 
 
 # ============================================================
-# METHOD DISCLOSURE
+# METHOD
 # ============================================================
 
-with st.expander("⚙️ How the engine works"):
+with st.expander(
+    "⚙️ How the engine works"
+):
 
     st.markdown(
         """
-        ### Analytical pipeline
+### Analytical pipeline
 
-        **1. Deterministic data layer**
+**1. Deterministic data layer**
 
-        - Revenue calculated from order items.
-        - Orders counted from order records.
-        - AOV calculated from revenue / orders.
-        - Customer rating calculated from reviews.
+- Revenue is calculated from order items.
+- Orders are counted from order records.
+- AOV is calculated from revenue / orders.
+- Customer rating is calculated from reviews.
 
-        **2. Signal Agent**
+**2. Signal Agent**
 
-        - Calculates month-over-month revenue movement.
-        - Compares the latest movement with historical changes.
-        - Uses a z-score to classify unusual movements.
+- Calculates month-over-month revenue movement.
+- Uses only completed monthly periods.
+- Compares the latest movement against a historical baseline.
+- Uses a z-score to identify unusual movements.
 
-        **3. Diagnostic Agent**
+**3. Diagnostic Agent**
 
-        - Compares category revenue between periods.
-        - Ranks declining categories.
-        - Separately summarizes negative customer-review themes.
+- Compares category revenue between completed periods.
+- Measures absolute and percentage movement.
+- Calculates category contribution.
+- Checks order volume and category history.
+- Flags potential discontinuities and sparse categories.
+- Separately summarizes negative customer-review themes.
 
-        **4. Strategist Agent**
+**4. Strategist Agent**
 
-        - Converts the analytical evidence into a recommended next step.
-        - Does not create quantitative facts.
+- Converts evidence into a recommended next step.
+- Can monitor, investigate, validate or abstain.
+- Does not create quantitative facts.
 
-        **5. Human decision**
+**5. Human decision**
 
-        - The recommendation remains reviewable and overridable.
-        - The engine explicitly avoids claiming causality where evidence is insufficient.
+- The recommendation remains reviewable and overridable.
+- The engine does not automatically execute business decisions.
+- Causality is not claimed without supporting evidence.
 
-        ### LLM vs non-LLM
+### Agent architecture
 
-        **Non-LLM / deterministic:**
+The prototype implements the agent roles as deterministic
+decision modules.
 
-        revenue, orders, AOV, review aggregation,
-        percentage change, category contribution,
-        z-score and evidence ranking.
+This ensures that quantitative outputs remain reproducible,
+traceable and auditable.
 
-        **Narrative / agent layer:**
-
-        Signal, Diagnostic and Strategist agents organize the
-        evidence and communicate it in decision-oriented language.
-
-        **Current prototype principle:**
-
-        The LLM/agent layer is not treated as the source of
-        quantitative truth.
-        """
+The architecture is intentionally designed so that an LLM can
+later be introduced for narrative generation without allowing
+the model to become the source of quantitative truth.
+"""
     )
 
+st.markdown("## 🤖 Agent Architecture")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown("### 01 · Signal Agent")
+    st.write(
+        "Detects whether the latest KPI movement "
+        "is statistically unusual relative to history."
+    )
+
+with col2:
+    st.markdown("### 02 · Diagnostic Agent")
+    st.write(
+        "Identifies category-level evidence and "
+        "checks whether apparent drivers require validation."
+    )
+
+with col3:
+    st.markdown("### 03 · Strategist Agent")
+    st.write(
+        "Converts evidence into a decision state: "
+        "MONITOR, VALIDATE, INVESTIGATE or ABSTAIN."
+    )
+
+st.markdown(
+    "**Signal → Evidence → Explanation → Action → Human Review**"
+)
 
 # ============================================================
 # DATA FRESHNESS
 # ============================================================
 
 st.markdown(
-    '<div class="section-eyebrow">Data Operations</div>'
-    '<div class="section-title">🕐 Source Freshness</div>',
+    """
+<div class="section-eyebrow">
+Data Operations
+</div>
+
+<div class="section-title">
+🕐 Source Freshness
+</div>
+""",
     unsafe_allow_html=True
 )
 
@@ -1784,7 +1987,11 @@ source_df = pd.DataFrame(
     [
         [
             "Orders",
-            f"{orders['order_purchase_timestamp'].max().date()}",
+            str(
+                orders[
+                    "order_purchase_timestamp"
+                ].max().date()
+            ),
             f"{len(orders):,}",
             "Available"
         ],
@@ -1818,71 +2025,131 @@ source_df = pd.DataFrame(
 
 st.dataframe(
     source_df,
-    use_container_width=True,
+    width="stretch",
     hide_index=True
 )
 
 
 # ============================================================
-# FEEDBACK LOOP
+# LEARNING LOOP — ANALYST FEEDBACK
 # ============================================================
 
+st.markdown("## ✍️ Analyst Feedback")
+
 st.markdown(
-    '<div class="section-eyebrow">Learning Loop</div>'
-    '<div class="section-title">✍️ Analyst Feedback</div>'
-    '<div class="section-caption">'
-    'Prototype mechanism for capturing corrections and overrides '
-    'for future evaluation.'
-    '</div>',
+    """
+    <div class="section-subtitle">
+        Prototype mechanism for capturing analyst corrections
+        and overrides for future evaluation.
+    </div>
+    """,
     unsafe_allow_html=True
 )
 
+st.markdown("### How useful was this recommendation?")
 
 feedback = st.radio(
-    "How useful was this recommendation?",
-    [
-        "Accept recommendation",
-        "Needs investigation",
-        "Override recommendation"
-    ],
-    horizontal=True
+    "Recommendation feedback",
+    ["👍 Useful", "👎 Not useful"],
+    horizontal=True,
+    key="recommendation_feedback"
 )
 
+correction = st.text_area(
+    "Optional correction or comment",
+    placeholder="Example: Inventory was unavailable in this category.",
+    key="analyst_correction"
+)
 
-if feedback == "Override recommendation":
+if st.button("Submit Feedback", type="primary"):
 
-    override_reason = st.text_input(
-        "Why are you overriding the recommendation?"
-    )
-
-else:
-
-    override_reason = ""
-
-
-if st.button("Record analyst decision"):
-
-    st.session_state["last_feedback"] = {
-        "decision": feedback,
-        "reason": override_reason,
-        "case_id": CASE_ID,
-        "timestamp": pd.Timestamp.now().isoformat()
+    feedback_record = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "case": "KPI-2026-08",
+        "feedback": feedback,
+        "correction": correction
     }
 
-    st.success(
-        "Analyst decision recorded for this session. "
-        "In production, this event would be persisted "
-        "to the feedback store."
+    if "feedback_records" not in st.session_state:
+        st.session_state.feedback_records = []
+
+    st.session_state.feedback_records.append(
+        feedback_record
     )
 
+    st.success(
+        "Feedback captured successfully for future evaluation."
+    )
+
+# ------------------------------------------------------------
+# FEEDBACK SUMMARY
+# ------------------------------------------------------------
+
+feedback_records = st.session_state.get(
+    "feedback_records",
+    []
+)
+
+useful_count = sum(
+    1
+    for record in feedback_records
+    if record["feedback"] == "👍 Useful"
+)
+
+not_useful_count = sum(
+    1
+    for record in feedback_records
+    if record["feedback"] == "👎 Not useful"
+)
+
+correction_count = sum(
+    1
+    for record in feedback_records
+    if record["correction"].strip()
+)
+
+st.markdown("### Learning Loop")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric(
+        "Feedback captured",
+        len(feedback_records)
+    )
+
+with col2:
+    st.metric(
+        "Useful",
+        useful_count
+    )
+
+with col3:
+    st.metric(
+        "Corrections",
+        correction_count
+    )
+
+st.caption(
+    "Analyst feedback is captured for future evaluation "
+    "and agent improvement. It does not automatically "
+    "change quantitative evidence."
+)
 
 # ============================================================
 # TELEMETRY
 # ============================================================
 
 st.markdown(
-    '<div class="section-eyebrow">Runtime</div>'
-    '<div class="section-title">📊 Engine Telemetry</div>',
+    """
+<div class="section-eyebrow">
+Runtime
+</div>
+
+<div class="section-title">
+📊 Engine Telemetry
+</div>
+""",
     unsafe_allow_html=True
 )
 
@@ -1894,22 +2161,22 @@ with telemetry_cols[0]:
 
     st.markdown(
         f"""
-        <div class="card">
+<div class="card">
 
-            <div class="card-label">
-                PIPELINE LATENCY
-            </div>
+<div class="card-label">
+PIPELINE LATENCY
+</div>
 
-            <div class="card-value">
-                {pipeline_latency:.2f}s
-            </div>
+<div class="card-value">
+{pipeline_latency:.2f}s
+</div>
 
-            <div class="card-sub">
-                data → recommendation
-            </div>
+<div class="card-sub">
+data → recommendation
+</div>
 
-        </div>
-        """,
+</div>
+""",
         unsafe_allow_html=True
     )
 
@@ -1918,22 +2185,22 @@ with telemetry_cols[1]:
 
     st.markdown(
         """
-        <div class="card">
+<div class="card">
 
-            <div class="card-label">
-                MODEL CALLS
-            </div>
+<div class="card-label">
+AGENT MODULES
+</div>
 
-            <div class="card-value">
-                0
-            </div>
+<div class="card-value">
+3
+</div>
 
-            <div class="card-sub">
-                prototype uses deterministic agents
-            </div>
+<div class="card-sub">
+Signal · Diagnostic · Strategist
+</div>
 
-        </div>
-        """,
+</div>
+""",
         unsafe_allow_html=True
     )
 
@@ -1942,22 +2209,22 @@ with telemetry_cols[2]:
 
     st.markdown(
         """
-        <div class="card">
+<div class="card">
 
-            <div class="card-label">
-                EST. LLM COST
-            </div>
+<div class="card-label">
+QUANTITATIVE MODEL CALLS
+</div>
 
-            <div class="card-value">
-                ₹0
-            </div>
+<div class="card-value">
+0
+</div>
 
-            <div class="card-sub">
-                no external LLM call in current pipeline
-            </div>
+<div class="card-sub">
+deterministic evidence layer
+</div>
 
-        </div>
-        """,
+</div>
+""",
         unsafe_allow_html=True
     )
 
@@ -1966,22 +2233,22 @@ with telemetry_cols[3]:
 
     st.markdown(
         f"""
-        <div class="card">
+<div class="card">
 
-            <div class="card-label">
-                EVIDENCE CONFIDENCE
-            </div>
+<div class="card-label">
+EVIDENCE CONFIDENCE
+</div>
 
-            <div class="card-value">
-                {evidence_confidence}
-            </div>
+<div class="card-value">
+{evidence_confidence}
+</div>
 
-            <div class="card-sub">
-                based on available evidence coverage
-            </div>
+<div class="card-sub">
+based on evidence coverage
+</div>
 
-        </div>
-        """,
+</div>
+""",
         unsafe_allow_html=True
     )
 
@@ -1992,24 +2259,25 @@ with telemetry_cols[3]:
 
 st.markdown(
     """
-    <div class="human">
+<div class="human">
 
-        <div class="human-title">
-            ✍️ Human Sign-off
-        </div>
+<div class="human-title">
+✍️ Human Sign-off
+</div>
 
-        <div class="human-text">
+<div class="human-text">
 
-            The engine detects, diagnoses and recommends —
-            but it does not automatically execute business decisions.
-            Quantitative evidence remains deterministic and traceable,
-            while recommendations remain reviewable, overridable and
-            accountable to a human decision-maker.
+The engine detects, diagnoses and recommends —
+but it does not automatically execute business decisions.
 
-        </div>
+Quantitative evidence remains deterministic and traceable,
+while recommendations remain reviewable, overridable and
+accountable to a human decision-maker.
 
-    </div>
-    """,
+</div>
+
+</div>
+""",
     unsafe_allow_html=True
 )
 
@@ -2020,20 +2288,20 @@ st.markdown(
 
 st.markdown(
     f"""
-    <br><br>
+<br><br>
 
-    <div style="
-        text-align:center;
-        color:#5b6584;
-        font-family:'IBM Plex Mono',monospace;
-        font-size:11px;
-        letter-spacing:1px;
-    ">
+<div style="
+text-align:center;
+color:#5b6584;
+font-family:'IBM Plex Mono',monospace;
+font-size:11px;
+letter-spacing:1px;
+">
 
-        KPI STORYTELLING ENGINE · CASE {CASE_ID}
-        · EVIDENCE BEFORE ACTION
+KPI STORYTELLING ENGINE · CASE {CASE_ID}
+· EVIDENCE BEFORE ACTION
 
-    </div>
-    """,
+</div>
+""",
     unsafe_allow_html=True
 )
