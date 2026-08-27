@@ -966,7 +966,7 @@ styled_table = (
 
 st.dataframe(
     styled_table,
-    use_container_width="stretch",
+    width="stretch",
     hide_index=True
 )
 
@@ -995,11 +995,28 @@ available_categories = (
 
 if available_categories:
 
-    selected_category = st.selectbox(
-        "Select a category to investigate",
-        available_categories,
-        index=0
-    )
+   # Default to the largest declining category
+declining_names = (
+    declining_categories
+    .sort_values("revenue_change")
+    ["product_category_name"]
+    .astype(str)
+    .tolist()
+)
+
+default_category = (
+    declining_names[0]
+    if declining_names
+    else available_categories[0]
+)
+
+default_index = available_categories.index(default_category)
+
+selected_category = st.selectbox(
+    "Select a category to investigate",
+    available_categories,
+    index=default_index
+)
 
     selected_rows = diagnosis[
         diagnosis["product_category_name"]
@@ -1206,10 +1223,10 @@ if available_categories:
 
             <br><br>
 
-            <b>Important:</b> Customer-review themes are measured "
-            "across the available review population. The current "
-            "pipeline does not establish a category-specific causal "
-            "relationship.
+            <b>Important:</b> Customer-review themes are measured
+across the available review population. The current
+pipeline does not establish a category-specific causal
+relationship.
 
             </div>
 
@@ -1427,7 +1444,7 @@ lineage_df = pd.DataFrame([
 
 st.dataframe(
     lineage_df,
-    use_container_width="stretch",
+    width="stretch",
     hide_index=True
 )
 
@@ -1526,7 +1543,7 @@ source_df = pd.DataFrame([
 
 st.dataframe(
     source_df,
-    use_container_width="stretch",
+    width="stretch",
     hide_index=True
 )
 
