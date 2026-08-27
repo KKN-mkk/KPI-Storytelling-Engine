@@ -4,10 +4,13 @@ import pandas as pd
 def diagnose_revenue_change(orders, items, products, reviews):
 
     orders = orders.copy()
+    items = items.copy()
+    products = products.copy()
+    reviews = reviews.copy()
 
-    # -----------------------------
+    # ============================================================
     # DATE PROCESSING
-    # -----------------------------
+    # ============================================================
 
     orders["order_purchase_timestamp"] = pd.to_datetime(
         orders["order_purchase_timestamp"]
@@ -18,28 +21,33 @@ def diagnose_revenue_change(orders, items, products, reviews):
         .dt.to_period("M")
     )
 
-    # Remove incomplete month
     monthly_orders = (
         orders.groupby("month")
         .size()
         .reset_index(name="order_count")
     )
 
+    # Remove potentially incomplete final month.
+    latest_raw_month = monthly_orders["month"].max()
+
     valid_months = monthly_orders[
-        monthly_orders["order_count"] >= 1000
+        monthly_orders["month"] < latest_raw_month
     ]["month"]
 
     orders = orders[
         orders["month"].isin(valid_months)
     ].copy()
 
-    # -----------------------------
-    # REVENUE ANALYSIS
-    # -----------------------------
+    # ============================================================
+    # REVENUE BY CATEGORY
+    # ============================================================
 
     data = orders.merge(
-        items[["order_id", "product_id", "price"]],
-        on="order_id"
+        items[
+            ["order_id", "product_id", "price"]
+        ],
+        on="order_id",
+        how="inner"
     )
 
     data = data.merge(
@@ -48,6 +56,12 @@ def diagnose_revenue_change(orders, items, products, reviews):
         ],
         on="product_id",
         how="left"
+    )
+
+    data["product_category_name"] = (
+        data["product_category_name"]
+        .fillna("Unknown")
+        .astype(str)
     )
 
     monthly_category_revenue = (
@@ -61,16 +75,18 @@ def diagnose_revenue_change(orders, items, products, reviews):
     latest_month = monthly_category_revenue["month"].max()
     previous_month = latest_month - 1
 
-    latest = monthly_category_revenue[
-        monthly_category_revenue["month"] == latest_month
-    ].rename(
-        columns={"price": "latest_revenue"}
+    latest = (
+        monthly_category_revenue[
+            monthly_category_revenue["month"] == latest_month
+        ]
+        .rename(columns={"price": "latest_revenue"})
     )
 
-    previous = monthly_category_revenue[
-        monthly_category_revenue["month"] == previous_month
-    ].rename(
-        columns={"price": "previous_revenue"}
+    previous = (
+        monthly_category_revenue[
+            monthly_category_revenue["month"] == previous_month
+        ]
+        .rename(columns={"price": "previous_revenue"})
     )
 
     comparison = latest.merge(
@@ -98,18 +114,74 @@ def diagnose_revenue_change(orders, items, products, reviews):
         * 100
     )
 
-    comparison = comparison.sort_values(
-        "revenue_change"
+    comparison["absolute_change"] = (
+        comparison["revenue_change"].abs()
     )
 
-    # -----------------------------
-    # CUSTOMER REVIEW ANALYSIS
-    # -----------------------------
+    comparison = comparison.sort_values(
+        "revenue_change"
+    ).reset_index(drop=True)
 
-    reviews = reviews.copy()
+    # ============================================================
+    # CONTRIBUTION TO OVERALL DECLINE
+    # ============================================================
+
+    total_change = comparison["revenue_change"].sum()
+
+    if total_change < 0:
+        comparison["decline_contribution"] = (
+            comparison["revenue_change"].clip(upper=0)
+            / total_change.abs()
+            * 100
+        )
+    else:
+        comparison["decline_contribution"] = 0.0
+
+    declining = comparison[
+        comparison["revenue_change"] < 0
+    ].copy()
+
+    declining["decline_rank"] = range(
+        1,
+        len(declining) + 1
+    )
+
+    comparison = comparison.merge(
+        declining[
+            [
+                "product_category_name",
+                "decline_rank"
+            ]
+        ],
+        on="product_category_name",
+        how="left"
+    )
+
+    # ============================================================
+    # CATEGORY HISTORY
+    # ============================================================
+
+    category_history = (
+        monthly_category_revenue
+        .groupby("product_category_name")["month"]
+        .nunique()
+        .reset_index(name="history_months")
+    )
+
+    comparison = comparison.merge(
+        category_history,
+        on="product_category_name",
+        how="left"
+    )
+
+    # ============================================================
+    # CUSTOMER REVIEW ANALYSIS
+    # ============================================================
 
     review_data = reviews.merge(
-        orders[["order_id", "month"]],
+        orders[
+            ["order_id", "month"]
+        ],
         on="order_id",
         how="inner"
     )
@@ -128,7 +200,6 @@ def diagnose_revenue_change(orders, items, products, reviews):
         .str.lower()
     )
 
-    # Business themes
     theme_keywords = {
 
         "Delivery issues": [
@@ -174,7 +245,6 @@ def diagnose_revenue_change(orders, items, products, reviews):
 
         theme_counts[theme] = count
 
-    # Sort themes
     theme_counts = dict(
         sorted(
             theme_counts.items(),

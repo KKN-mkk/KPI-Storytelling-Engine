@@ -1,9 +1,11 @@
+import time
 import streamlit as st
 import pandas as pd
 
 from agents.signal_agent import detect_signal
 from agents.diagnostic_agent import diagnose_revenue_change
 from agents.strategist_agent import generate_strategy
+
 
 # ============================================================
 # PAGE CONFIG
@@ -16,526 +18,386 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+CASE_ID = "KPI-2026-08"
+
+
 # ============================================================
 # DESIGN TOKENS & STYLES
 # ============================================================
 
-CASE_ID = "KPI-2026-08"
-
 st.markdown("""
+<style>
+
+:root {
+    --ink: #10162a;
+    --ink-2: #0d1222;
+    --panel: #161d35;
+    --panel-2: #1b2440;
+    --panel-3: #1f2847;
+    --line: #2a3358;
+    --line-2: #3a4568;
+    --paper: #e7dcc0;
+    --paper-2: #d4c9b0;
+    --brick: #b0473a;
+    --brick-2: #c95647;
+    --sage: #6a8f5c;
+    --sage-2: #7aa36a;
+    --muted: #8a94b3;
+    --text: #eef0f6;
+    --glow-brick: rgba(176, 71, 58, 0.15);
+    --glow-sage: rgba(106, 143, 92, 0.12);
+}
+
+html, body, [class*="css"] {
+    font-family: 'IBM Plex Sans', sans-serif;
+}
+
+.stApp {
+    background:
+        radial-gradient(1200px 500px at 15% -5%, rgba(176,71,58,0.07), transparent 60%),
+        radial-gradient(900px 500px at 100% 0%, rgba(106,143,92,0.05), transparent 55%),
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        var(--ink);
+
+    background-size:
+        100% 100%,
+        100% 100%,
+        40px 40px,
+        40px 40px,
+        100% 100%;
+
+    color: var(--text);
+}
+
+.block-container {
+    max-width: 1320px;
+    padding-top: 1.6rem;
+    padding-bottom: 4rem;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.case-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(180deg, var(--paper), var(--paper-2));
+    color: #2a2213;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    padding: 8px 16px;
+    border-radius: 0 0 10px 10px;
+    margin-bottom: 0;
+}
+
+.hero {
+    border: 1px solid var(--line);
+    border-top: none;
+    border-radius: 0 12px 12px 12px;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    padding: 32px 36px 30px 36px;
+    margin-bottom: 40px;
+}
+
+.hero-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+    color: var(--text);
+}
+
+.hero-subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+}
+
+/* ============================================================
+   SECTION HEADINGS
+   ============================================================ */
+
+.section-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--paper);
+    text-transform: uppercase;
+    margin-top: 36px;
+    margin-bottom: 2px;
+}
+
+.section-title {
+    font-size: 20px;
+    font-weight: 650;
+    margin-top: 2px;
+    margin-bottom: 4px;
+    color: var(--text);
+}
+
+.section-caption {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 16px;
+    border-bottom: 1px dashed var(--line);
+    padding-bottom: 14px;
+}
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+
+.card {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px 10px 10px 10px;
+    padding: 18px 20px;
+    height: 100%;
+}
+
+.card-label {
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    margin-bottom: 10px;
+}
+
+.card-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.card-sub {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 6px;
+}
+
+/* ============================================================
+   STORY
+   ============================================================ */
+
+.story {
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--brick);
+    border-radius: 4px 10px 10px 4px;
+    padding: 28px 32px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.story-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.story-text {
+    font-family: 'Source Serif 4', serif;
+    font-size: 19px;
+    line-height: 1.62;
+    color: var(--text);
+}
+
+.story-text b {
+    color: var(--paper);
+}
+
+/* ============================================================
+   AGENT
+   ============================================================ */
+
+.agent {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px;
+    min-height: 180px;
+}
+
+.exhibit-tag {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #2a2213;
+    background: var(--paper);
+    padding: 3px 9px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+}
+
+.agent-name {
+    font-size: 16px;
+    font-weight: 650;
+    margin-bottom: 12px;
+    color: var(--text);
+}
+
+.agent-text {
+    color: #c5cce0;
+    line-height: 1.6;
+    font-size: 13.5px;
+}
+
+/* ============================================================
+   RECOMMENDATION
+   ============================================================ */
+
+.recommendation {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--sage);
+    border-radius: 4px 10px 10px 10px;
+    padding: 26px 28px;
+}
+
+.recommendation-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--sage);
+    margin-bottom: 10px;
+}
+
+.recommendation-text {
+    font-family: 'Source Serif 4', serif;
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--text);
+}
+
+.meta-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-transform: uppercase;
+}
+
+/* ============================================================
+   INVESTIGATION PANEL
+   ============================================================ */
+
+.investigation {
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--paper);
+    border-radius: 4px 10px 10px 4px;
+    padding: 26px 28px;
+    margin-top: 10px;
+}
+
+.investigation-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    color: var(--paper);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.investigation-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.evidence-box {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px;
+    height: 100%;
+}
+
+.evidence-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.evidence-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.55;
+}
+
+/* ============================================================
+   HUMAN SIGN-OFF
+   ============================================================ */
+
+.human {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 18px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.human-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--paper);
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.human-text {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+
+[data-testid="stDataFrame"] {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--panel);
+}
+
+</style>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
-<style>
-
-    :root {
-        --ink: #10162a;
-        --ink-2: #0d1222;
-        --panel: #161d35;
-        --panel-2: #1b2440;
-        --panel-3: #1f2847;
-        --line: #2a3358;
-        --line-2: #3a4568;
-        --paper: #e7dcc0;
-        --paper-2: #d4c9b0;
-        --brick: #b0473a;
-        --brick-2: #c95647;
-        --sage: #6a8f5c;
-        --sage-2: #7aa36a;
-        --muted: #8a94b3;
-        --text: #eef0f6;
-        --glow-brick: rgba(176, 71, 58, 0.15);
-        --glow-sage: rgba(106, 143, 92, 0.12);
-    }
-
-    html, body, [class*="css"] {
-        font-family: 'IBM Plex Sans', sans-serif;
-    }
-
-    .stApp {
-        background:
-            radial-gradient(1200px 500px at 15% -5%, rgba(176,71,58,0.07), transparent 60%),
-            radial-gradient(900px 500px at 100% 0%, rgba(106,143,92,0.05), transparent 55%),
-            linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-            var(--ink);
-        background-size: 
-            100% 100%,
-            100% 100%,
-            40px 40px,
-            40px 40px,
-            100% 100%;
-        color: var(--text);
-    }
-
-    .block-container {
-        max-width: 1320px;
-        padding-top: 1.6rem;
-        padding-bottom: 4rem;
-    }
-
-    /* ---------------- Header / case file tab ---------------- */
-
-    .case-tab {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        background: linear-gradient(180deg, var(--paper), var(--paper-2));
-        color: #2a2213;
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 12px;
-        font-weight: 600;
-        letter-spacing: 1.5px;
-        padding: 8px 16px 8px 16px;
-        border-radius: 0 0 10px 10px;
-        margin-bottom: 0;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-        position: relative;
-    }
-
-    .case-tab::after {
-        content: "";
-        position: absolute;
-        bottom: -1px;
-        left: 12px;
-        right: 12px;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(42, 34, 19, 0.3), transparent);
-    }
-
-    .hero {
-        border: 1px solid var(--line);
-        border-top: none;
-        border-radius: 0 12px 12px 12px;
-        background: linear-gradient(180deg, var(--panel-2), var(--panel));
-        padding: 32px 36px 30px 36px;
-        margin-bottom: 40px;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .hero::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, var(--line), var(--panel-3), var(--line));
-    }
-
-    .hero-title {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 32px;
-        font-weight: 700;
-        letter-spacing: -0.5px;
-        margin-bottom: 6px;
-        color: var(--text);
-    }
-
-    .hero-subtitle {
-        color: var(--muted);
-        font-size: 15px;
-        font-family: 'Source Serif 4', serif;
-        font-style: italic;
-    }
-
-    /* ---------------- Section headings ---------------- */
-
-    .section-eyebrow {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 2px;
-        color: var(--paper);
-        text-transform: uppercase;
-        margin-top: 36px;
-        margin-bottom: 2px;
-    }
-
-    .section-title {
-        font-size: 20px;
-        font-weight: 650;
-        margin-top: 2px;
-        margin-bottom: 4px;
-        color: var(--text);
-    }
-
-    .section-caption {
-        color: var(--muted);
-        font-size: 13px;
-        margin-bottom: 16px;
-        border-bottom: 1px dashed var(--line);
-        padding-bottom: 14px;
-    }
-
-    /* ---------------- Evidence / KPI cards ---------------- */
-
-    .card {
-        position: relative;
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 4px 10px 10px 10px;
-        padding: 18px 20px;
-        height: 100%;
-        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-    }
-
-    .card:hover {
-        transform: translateY(-2px);
-        border-color: var(--line-2);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-    }
-
-    .card::before {
-        content: "";
-        position: absolute;
-        top: 0; left: 0;
-        width: 26px; height: 26px;
-        background: linear-gradient(135deg, transparent 50%, var(--ink) 50%);
-        border-radius: 4px 0 0 0;
-        transition: background 0.18s ease;
-    }
-
-    .card:hover::before {
-        background: linear-gradient(135deg, transparent 50%, var(--panel-3) 50%);
-    }
-
-    .card-label {
-        color: var(--muted);
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 1.2px;
-        margin-bottom: 10px;
-    }
-
-    .card-value {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 26px;
-        font-weight: 700;
-        color: var(--text);
-    }
-
-    .card-sub {
-        color: var(--muted);
-        font-size: 12px;
-        margin-top: 6px;
-    }
-
-    /* ---------------- Case summary (story) ---------------- */
-
-    .story {
-        background: linear-gradient(180deg, var(--panel), var(--panel-2));
-        border: 1px solid var(--line);
-        border-left: 4px solid var(--brick);
-        border-radius: 4px 10px 10px 4px;
-        padding: 28px 32px;
-        margin-top: 8px;
-        margin-bottom: 8px;
-        position: relative;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-    }
-
-    .story::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-image: 
-            repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 2px,
-                rgba(0, 0, 0, 0.02) 2px,
-                rgba(0, 0, 0, 0.02) 4px
-            );
-        pointer-events: none;
-        border-radius: 4px 10px 10px 4px;
-    }
-
-    .story-label {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 1.6px;
-        color: var(--muted);
-        text-transform: uppercase;
-        margin-bottom: 12px;
-        position: relative;
-        z-index: 1;
-    }
-
-    .story-text {
-        font-family: 'Source Serif 4', serif;
-        font-size: 19px;
-        line-height: 1.62;
-        font-weight: 400;
-        color: var(--text);
-        position: relative;
-        z-index: 1;
-    }
-
-    .story-text b {
-        color: var(--paper);
-        font-weight: 600;
-    }
-
-    /* ---------------- Stamp (signature element) ---------------- */
-
-    .stamp {
-        display: inline-block;
-        font-family: 'IBM Plex Mono', monospace;
-        font-weight: 700;
-        font-size: 13px;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        padding: 8px 18px;
-        border: 2px dashed;
-        border-radius: 6px;
-        transform: rotate(-2deg);
-        margin-top: 6px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        position: relative;
-        z-index: 1;
-    }
-
-    .stamp:hover {
-        transform: rotate(0deg) scale(1.02);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-
-    .stamp-alert {
-        color: var(--brick);
-        border-color: var(--brick);
-        background: rgba(176, 71, 58, 0.1);
-        box-shadow: 0 0 20px var(--glow-brick);
-    }
-
-    .stamp-normal {
-        color: var(--sage);
-        border-color: var(--sage);
-        background: rgba(106, 143, 92, 0.1);
-        box-shadow: 0 0 20px var(--glow-sage);
-    }
-
-    /* ---------------- Agent / exhibit cards ---------------- */
-
-    .agent {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        padding: 20px 22px;
-        min-height: 180px;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .agent:hover {
-        border-color: var(--paper);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-    }
-
-    .exhibit-tag {
-        display: inline-block;
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 10.5px;
-        font-weight: 700;
-        letter-spacing: 1px;
-        color: #2a2213;
-        background: var(--paper);
-        padding: 3px 9px;
-        border-radius: 4px;
-        margin-bottom: 12px;
-    }
-
-    .agent-name {
-        font-size: 16px;
-        font-weight: 650;
-        margin-bottom: 12px;
-        color: var(--text);
-    }
-
-    .agent-text {
-        color: #c5cce0;
-        line-height: 1.6;
-        font-size: 13.5px;
-    }
-
-    .agent-text b {
-        color: var(--text);
-    }
-
-    /* ---------------- Recommendation ---------------- */
-
-    .recommendation {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-top: 3px solid var(--sage);
-        border-radius: 4px 10px 10px 10px;
-        padding: 26px 28px;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .recommendation:hover {
-        border-color: var(--line-2);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-    }
-
-    .recommendation-title {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        color: var(--sage);
-        margin-bottom: 10px;
-    }
-
-    .recommendation-text {
-        font-family: 'Source Serif 4', serif;
-        font-size: 17px;
-        line-height: 1.6;
-        color: var(--text);
-    }
-
-    .recommendation .meta-label {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 11px;
-        letter-spacing: 1px;
-        color: var(--muted);
-        text-transform: uppercase;
-    }
-
-    /* ---------------- Human sign-off ---------------- */
-
-    .human {
-        background: var(--panel-2);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 16px 20px;
-        margin-top: 18px;
-        display: flex;
-        gap: 14px;
-        align-items: flex-start;
-        transition: border-color 0.2s ease;
-    }
-
-    .human:hover {
-        border-color: var(--line-2);
-    }
-
-    .human-title {
-        font-family: 'IBM Plex Mono', monospace;
-        font-weight: 700;
-        font-size: 12px;
-        letter-spacing: 1px;
-        color: var(--paper);
-        text-transform: uppercase;
-        white-space: nowrap;
-    }
-
-    .human-text {
-        color: var(--muted);
-        font-size: 13px;
-        line-height: 1.5;
-    }
-
-    /* ---------------- Misc ---------------- */
-
-    #MainMenu { visibility: hidden; }
-    footer { visibility: hidden; }
-
-    [data-testid="stDataFrame"] {
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        overflow: hidden;
-        background: var(--panel);
-    }
-
-    [data-testid="stDataFrame"] th {
-        background: var(--panel-2);
-        color: var(--paper);
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        border-bottom: 2px solid var(--line);
-        padding: 12px 16px;
-    }
-
-    [data-testid="stDataFrame"] td {
-        background: var(--panel);
-        color: var(--text);
-        font-size: 13px;
-        border-bottom: 1px solid var(--line);
-        padding: 12px 16px;
-        transition: background 0.15s ease;
-    }
-
-    [data-testid="stDataFrame"] tr:hover td {
-        background: var(--panel-2);
-    }
-
-    [data-testid="stDataFrame"] tr:nth-child(even) td {
-        background: rgba(255, 255, 255, 0.02);
-    }
-
-    [data-testid="stDataFrame"] tr:nth-child(even):hover td {
-        background: var(--panel-2);
-    }
-
-    /* ---------------- Focus states ---------------- */
-
-    input:focus,
-    button:focus,
-    [data-testid="stVerticalBlock"]:focus-within {
-        outline: 2px solid var(--paper);
-        outline-offset: 2px;
-    }
-
-    .card:focus-within,
-    .agent:focus-within {
-        border-color: var(--paper);
-        box-shadow: 0 0 0 2px var(--glow-sage);
-    }
-
-    /* ---------------- Responsive ---------------- */
-
-    @media (max-width: 1100px) {
-        .block-container {
-            max-width: 100%;
-            padding-left: 2rem;
-            padding-right: 2rem;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .hero {
-            padding: 24px 20px 22px 20px;
-        }
-        
-        .hero-title {
-            font-size: 26px;
-        }
-        
-        .card-value {
-            font-size: 22px;
-        }
-        
-        .story-text {
-            font-size: 16px;
-        }
-        
-        .agent {
-            min-height: auto;
-        }
-    }
-
-</style>
 """, unsafe_allow_html=True)
+
 
 # ============================================================
 # LOAD DATA
@@ -543,267 +405,549 @@ st.markdown("""
 
 @st.cache_data
 def load_data():
+
     orders = pd.read_csv("data/olist_orders_dataset.csv")
     items = pd.read_csv("data/olist_order_items_dataset.csv")
     products = pd.read_csv("data/olist_products_dataset.csv")
     reviews = pd.read_csv("data/olist_order_reviews_dataset.csv")
+
     return orders, items, products, reviews
+
 
 orders, items, products, reviews = load_data()
 
-# ============================================================
-# MONTHLY REVENUE
-# ============================================================
-
-order_revenue = items.groupby("order_id")["price"].sum().reset_index()
-data = orders.merge(order_revenue, on="order_id")
-data["order_purchase_timestamp"] = pd.to_datetime(data["order_purchase_timestamp"])
-data["month"] = data["order_purchase_timestamp"].dt.to_period("M")
-monthly_revenue = data.groupby("month")["price"].sum().reset_index()
 
 # ============================================================
-# SIGNAL AGENT
+# DATA PREPARATION
 # ============================================================
+
+orders = orders.copy()
+items = items.copy()
+products = products.copy()
+reviews = reviews.copy()
+
+orders["order_purchase_timestamp"] = pd.to_datetime(
+    orders["order_purchase_timestamp"]
+)
+
+orders["month"] = orders[
+    "order_purchase_timestamp"
+].dt.to_period("M")
+
+
+# ============================================================
+# REVENUE
+# ============================================================
+
+order_revenue = (
+    items.groupby("order_id")["price"]
+    .sum()
+    .reset_index()
+)
+
+data = orders.merge(
+    order_revenue,
+    on="order_id",
+    how="inner"
+)
+
+
+monthly_revenue = (
+    data.groupby("month")["price"]
+    .sum()
+    .reset_index()
+)
+
+
+# ============================================================
+# OTHER BUSINESS KPIs
+# ============================================================
+
+monthly_orders = (
+    orders.groupby("month")
+    .size()
+    .reset_index(name="orders")
+)
+
+monthly_aov = monthly_revenue.merge(
+    monthly_orders,
+    on="month",
+    how="left"
+)
+
+monthly_aov["aov"] = (
+    monthly_aov["price"]
+    / monthly_aov["orders"].replace(0, pd.NA)
+)
+
+
+# ============================================================
+# CUSTOMER RATING KPI
+# ============================================================
+
+review_kpi = reviews.merge(
+    orders[["order_id", "month"]],
+    on="order_id",
+    how="inner"
+)
+
+monthly_rating = (
+    review_kpi.groupby("month")["review_score"]
+    .mean()
+    .reset_index(name="avg_rating")
+)
+
+
+# ============================================================
+# AGENT PIPELINE
+# ============================================================
+
+pipeline_start = time.perf_counter()
 
 signal = detect_signal(monthly_revenue)
 
-# ============================================================
-# DIAGNOSTIC AGENT
-# ============================================================
-
-diagnosis, latest_month, previous_month, themes = diagnose_revenue_change(
-    orders, items, products, reviews
+diagnosis, latest_month, previous_month, themes = (
+    diagnose_revenue_change(
+        orders,
+        items,
+        products,
+        reviews
+    )
 )
 
+strategy = generate_strategy(
+    signal,
+    diagnosis,
+    themes,
+    latest_month,
+    previous_month
+)
+
+pipeline_latency = time.perf_counter() - pipeline_start
+
+
 # ============================================================
-# STRATEGIST AGENT
+# LATEST KPI VALUES
 # ============================================================
 
-strategy = generate_strategy(signal, diagnosis, themes, latest_month, previous_month)
+latest_revenue_row = monthly_revenue[
+    monthly_revenue["month"] == signal["latest_month"]
+]
+
+previous_revenue_row = monthly_revenue[
+    monthly_revenue["month"] == previous_month
+]
+
+latest_revenue = (
+    latest_revenue_row["price"].iloc[0]
+    if not latest_revenue_row.empty
+    else 0
+)
+
+previous_revenue = (
+    previous_revenue_row["price"].iloc[0]
+    if not previous_revenue_row.empty
+    else 0
+)
+
+latest_orders_row = monthly_orders[
+    monthly_orders["month"] == signal["latest_month"]
+]
+
+latest_orders = (
+    latest_orders_row["orders"].iloc[0]
+    if not latest_orders_row.empty
+    else 0
+)
+
+latest_aov = (
+    latest_revenue / latest_orders
+    if latest_orders > 0
+    else 0
+)
+
+latest_rating_row = monthly_rating[
+    monthly_rating["month"] == signal["latest_month"]
+]
+
+latest_rating = (
+    latest_rating_row["avg_rating"].iloc[0]
+    if not latest_rating_row.empty
+    else None
+)
+
 
 # ============================================================
-# GET REVENUE VALUES
+# SIGNAL STATUS
 # ============================================================
 
-latest_revenue = monthly_revenue[monthly_revenue["month"] == signal["latest_month"]]["price"].iloc[0]
-previous_revenue = monthly_revenue[monthly_revenue["month"] == previous_month]["price"].iloc[0]
-is_alert = str(signal["signal"]).strip().lower() not in ("normal", "normal variance", "no anomaly")
+signal_status = str(
+    signal["signal"]
+).strip().upper()
+
+is_alert = signal_status == "SIGNIFICANT CHANGE"
+
+
+# ============================================================
+# DATA QUALITY / CONFIDENCE
+# ============================================================
+
+diagnosis_valid = diagnosis[
+    diagnosis["previous_revenue"] > 0
+].copy()
+
+declining_categories = diagnosis_valid[
+    diagnosis_valid["revenue_change"] < 0
+].copy()
+
+if len(diagnosis_valid) == 0:
+
+    evidence_confidence = "LOW"
+
+elif len(declining_categories) < 2:
+
+    evidence_confidence = "MEDIUM"
+
+else:
+
+    evidence_confidence = "HIGH"
+
 
 # ============================================================
 # HEADER
 # ============================================================
 
 st.markdown(f"""
-<div class="case-tab">📁 CASE FILE No. {CASE_ID}</div>
+<div class="case-tab">
+📁 CASE FILE No. {CASE_ID}
+</div>
 
 <div class="hero">
-    <div class="hero-title">KPI Storytelling Engine</div>
-    <div class="hero-subtitle">
-        Three agents build the case on a revenue movement — evidence first, verdict last, decision always human.
-    </div>
+
+<div class="hero-title">
+KPI Storytelling Engine
+</div>
+
+<div class="hero-subtitle">
+From signal → evidence → explanation → action — with uncertainty and human accountability built in.
+</div>
+
 </div>
 """, unsafe_allow_html=True)
 
+
 # ============================================================
-# TOP KPI CARDS
+# KPI CARDS
 # ============================================================
 
 c1, c2, c3, c4 = st.columns(4)
 
 with c1:
+
     st.markdown(f"""
     <div class="card">
         <div class="card-label">LATEST REVENUE</div>
         <div class="card-value">₹{latest_revenue:,.0f}</div>
-        <div class="card-sub">{latest_month}</div>
+        <div class="card-sub">{signal["latest_month"]}</div>
     </div>
     """, unsafe_allow_html=True)
+
 
 with c2:
+
     st.markdown(f"""
     <div class="card">
-        <div class="card-label">MONTH-OVER-MONTH</div>
+        <div class="card-label">REVENUE CHANGE</div>
         <div class="card-value">{signal["latest_change"]:.2f}%</div>
-        <div class="card-sub">{previous_month} → {latest_month}</div>
+        <div class="card-sub">{previous_month} → {signal["latest_month"]}</div>
     </div>
     """, unsafe_allow_html=True)
+
 
 with c3:
+
     st.markdown(f"""
     <div class="card">
-        <div class="card-label">SIGNAL</div>
-        <div class="card-value">{signal["signal"]}</div>
-        <div class="card-sub">Z-score: {signal["z_score"]:.2f}</div>
+        <div class="card-label">ORDERS</div>
+        <div class="card-value">{latest_orders:,.0f}</div>
+        <div class="card-sub">latest complete period</div>
     </div>
     """, unsafe_allow_html=True)
+
 
 with c4:
+
+    rating_text = (
+        f"{latest_rating:.2f} / 5"
+        if latest_rating is not None
+        else "N/A"
+    )
+
     st.markdown(f"""
     <div class="card">
-        <div class="card-label">ANALYSIS WINDOW</div>
-        <div class="card-value">{previous_month}</div>
-        <div class="card-sub">compared with {latest_month}</div>
+        <div class="card-label">CUSTOMER RATING</div>
+        <div class="card-value">{rating_text}</div>
+        <div class="card-sub">average review score</div>
     </div>
     """, unsafe_allow_html=True)
 
+
 # ============================================================
-# CASE SUMMARY (executive story)
+# CASE SUMMARY
 # ============================================================
 
 st.markdown(
     '<div class="section-eyebrow">Case Summary</div>'
-    '<div class="section-title">📖 What changed, why, and what to do next</div>',
+    '<div class="section-title">📖 Executive Story</div>'
+    '<div class="section-caption">'
+    'A deterministic analytical chain converts the KPI movement into an evidence-backed narrative.'
+    '</div>',
     unsafe_allow_html=True
 )
 
-top_category = diagnosis[diagnosis["revenue_change"] < 0].iloc[0]["product_category_name"]
-top_category_change = diagnosis[diagnosis["revenue_change"] < 0].iloc[0]["percentage_change"]
-top_theme = max(themes, key=themes.get)
+
+if not declining_categories.empty:
+
+    top_category_row = declining_categories.iloc[0]
+
+    top_category = top_category_row[
+        "product_category_name"
+    ]
+
+    top_category_change = top_category_row[
+        "percentage_change"
+    ]
+
+else:
+
+    top_category = "No material declining category identified"
+    top_category_change = 0
+
+
+top_theme = (
+    max(themes, key=themes.get)
+    if themes
+    else "No dominant theme"
+)
+
 
 story = (
     f"Revenue changed by <b>{signal['latest_change']:.2f}%</b> "
-    f"in {latest_month}, but the Signal Agent classifies this "
-    f"movement as <b>{signal['signal'].lower()}</b>. "
-    f"The largest category-level decline came from "
-    f"<b>{top_category}</b>, down {top_category_change:.1f}%. "
-    f"Customer reviews are most strongly associated with "
-    f"<b>{top_theme.lower()}</b> issues."
+    f"in {signal['latest_month']}. The Signal Agent classifies "
+    f"this as <b>{signal['signal'].lower()}</b>. "
 )
 
-stamp_class = "stamp-alert" if is_alert else "stamp-normal"
-stamp_text = signal["signal"]
+if not declining_categories.empty:
 
-st.markdown(
-    f"""
-    <div class="story">
-        <div class="story-label">Filed evidence — Read before acting</div>
-        <div class="story-text">{story}</div>
-        <br>
-        <span class="stamp {stamp_class}">Verdict: {stamp_text}</span>
-    </div>
-    """,
-    unsafe_allow_html=True
+    story += (
+        f"The largest category-level decline is "
+        f"<b>{top_category}</b>, down "
+        f"<b>{top_category_change:.1f}%</b>. "
+    )
+
+story += (
+    f"Across the available customer feedback, "
+    f"<b>{top_theme.lower()}</b> is the leading review theme. "
+    f"This is evidence for investigation, not proof of causation."
 )
+
+
+st.markdown(f"""
+<div class="story">
+
+<div class="story-label">
+Filed Evidence — Read Before Acting
+</div>
+
+<div class="story-text">
+{story}
+</div>
+
+</div>
+""", unsafe_allow_html=True)
+
 
 # ============================================================
-# REVENUE TREND
+# CONFIDENCE / ABSTENTION
+# ============================================================
+
+if evidence_confidence == "LOW":
+
+    st.warning(
+        "LOW CONFIDENCE — Evidence is insufficient to support a "
+        "specific category-level action. The engine recommends "
+        "additional investigation rather than asserting a cause."
+    )
+
+elif evidence_confidence == "MEDIUM":
+
+    st.info(
+        "MEDIUM CONFIDENCE — A category movement is visible, "
+        "but the available evidence does not establish causality."
+    )
+
+else:
+
+    st.success(
+        "HIGH EVIDENCE COVERAGE — Multiple category movements "
+        "are available for comparison. Causality still requires validation."
+    )
+
+
+# ============================================================
+# EXHIBIT A — REVENUE TREND
 # ============================================================
 
 st.markdown(
     '<div class="section-eyebrow">Exhibit A</div>'
     '<div class="section-title">📈 Revenue Trend</div>'
-    '<div class="section-caption">Completed months only — incomplete periods are excluded from the signal.</div>',
+    '<div class="section-caption">'
+    'Completed monthly periods used by the Signal Agent.'
+    '</div>',
     unsafe_allow_html=True
 )
 
-chart_data = monthly_revenue[monthly_revenue["month"] <= signal["latest_month"]].copy()
+
+chart_data = monthly_revenue[
+    monthly_revenue["month"] <= signal["latest_month"]
+].copy()
+
 chart_data["month"] = chart_data["month"].astype(str)
-chart_data = chart_data.rename(columns={"price": "Revenue (₹)"})
+
+chart_data = chart_data.rename(
+    columns={"price": "Revenue (₹)"}
+)
+
 chart_data = chart_data.set_index("month")
-
-latest_month_str = str(signal["latest_month"])
-
-st.markdown(f"""
-<div style="
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 14px 18px;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-">
-    <div style="
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: {'var(--brick)' if is_alert else 'var(--sage)'};
-        box-shadow: 0 0 12px {'var(--glow-brick)' if is_alert else 'var(--glow-sage)'};
-    "></div>
-    <div style="
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 12px;
-        color: var(--muted);
-    ">
-        Latest period: <b style="color: var(--text)">{latest_month_str}</b> • 
-        Change: <b style="color: {'var(--brick)' if is_alert else 'var(--sage)'}">{signal['latest_change']:.2f}%</b>
-    </div>
-</div>
-""", unsafe_allow_html=True)
 
 st.line_chart(
     chart_data["Revenue (₹)"],
-    height=320,
-    color="#b0473a" if is_alert else "#6a8f5c"
+    height=320
 )
 
+
 # ============================================================
-# TWO-COLUMN AGENT VIEW
+# EXHIBIT B + C
 # ============================================================
 
 left, right = st.columns(2)
 
+
 with left:
+
     st.markdown(
         '<div class="section-eyebrow">Exhibit B</div>'
         '<div class="section-title">🔎 Signal Agent</div>',
         unsafe_allow_html=True
     )
-    st.markdown(
-        f"""
-        <div class="agent">
-            <div class="exhibit-tag">STATISTICAL TEST</div>
-            <div class="agent-name">Is the change actually unusual?</div>
-            <div class="agent-text">
-                <b>Revenue change:</b> {signal["latest_change"]:.2f}%<br><br>
-                <b>Historical average:</b> {signal["historical_mean"]:.2f}%<br><br>
-                <b>Historical standard deviation:</b> {signal["historical_std"]:.2f}<br><br>
-                <b>Z-score:</b> {signal["z_score"]:.2f}<br><br>
-                <b>Conclusion:</b> {signal["signal"]}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+
+    st.markdown(f"""
+    <div class="agent">
+
+    <div class="exhibit-tag">
+    STATISTICAL TEST
+    </div>
+
+    <div class="agent-name">
+    Is the movement statistically unusual?
+    </div>
+
+    <div class="agent-text">
+
+    <b>Latest change:</b>
+    {signal["latest_change"]:.2f}%<br><br>
+
+    <b>Historical mean:</b>
+    {signal["historical_mean"]:.2f}%<br><br>
+
+    <b>Historical standard deviation:</b>
+    {signal["historical_std"]:.2f}<br><br>
+
+    <b>Z-score:</b>
+    {signal["z_score"]:.2f}<br><br>
+
+    <b>Verdict:</b>
+    {signal["signal"]}
+
+    </div>
+
+    </div>
+    """, unsafe_allow_html=True)
+
 
 with right:
+
     st.markdown(
         '<div class="section-eyebrow">Exhibit C</div>'
         '<div class="section-title">💬 Customer Voice</div>',
         unsafe_allow_html=True
     )
+
     theme_df = pd.DataFrame(
         list(themes.items()),
         columns=["Theme", "Negative Reviews"]
-    ).sort_values("Negative Reviews", ascending=True)
-    st.bar_chart(
-        theme_df.set_index("Theme"),
-        height=250,
-        color="#b0473a",
-        horizontal=True
     )
 
+    if not theme_df.empty:
+
+        theme_df = theme_df.sort_values(
+            "Negative Reviews",
+            ascending=True
+        )
+
+        st.bar_chart(
+            theme_df.set_index("Theme"),
+            height=250
+        )
+
+    st.caption(
+        "Themes are derived from negative review text using deterministic "
+        "keyword matching. They are not linked to individual revenue categories."
+    )
+
+
 # ============================================================
-# DIAGNOSTIC AGENT
+# EXHIBIT D — DIAGNOSTIC AGENT
 # ============================================================
 
 st.markdown(
     '<div class="section-eyebrow">Exhibit D</div>'
     '<div class="section-title">🧠 Diagnostic Agent</div>'
-    f'<div class="section-caption">Evidence behind the {previous_month} → {latest_month} movement</div>',
+    f'<div class="section-caption">'
+    f'Category-level revenue contribution: {previous_month} → {latest_month}.'
+    f'</div>',
     unsafe_allow_html=True
 )
 
+
 display_data = diagnosis[
-    ["product_category_name", "latest_revenue", "previous_revenue", "revenue_change", "percentage_change"]
-].head(8).copy()
+    [
+        "product_category_name",
+        "latest_revenue",
+        "previous_revenue",
+        "revenue_change",
+        "percentage_change"
+    ]
+].head(10).copy()
 
-display_data.columns = ["Category", "Latest Revenue", "Previous Revenue", "Revenue Change", "% Change"]
 
-def _color_change(val):
-    color = "#e08a7d" if val < 0 else "#9dc191"
-    return f"color: {color}; font-weight: 600;"
+display_data.columns = [
+    "Category",
+    "Latest Revenue",
+    "Previous Revenue",
+    "Revenue Change",
+    "% Change"
+]
+
+
+def color_change(value):
+
+    if value < 0:
+
+        return "color: #e08a7d; font-weight: 600;"
+
+    return "color: #9dc191; font-weight: 600;"
+
 
 styled_table = (
     display_data.style
@@ -811,19 +955,275 @@ styled_table = (
         "Latest Revenue": "₹{:,.0f}",
         "Previous Revenue": "₹{:,.0f}",
         "Revenue Change": "₹{:,.0f}",
-        "% Change": "{:.1f}%",
+        "% Change": "{:.1f}%"
     })
-    .map(_color_change, subset=["Revenue Change", "% Change"])
+    .map(
+        color_change,
+        subset=["Revenue Change", "% Change"]
+    )
 )
+
 
 st.dataframe(
     styled_table,
-    use_container_width=True,
+    use_container_width="stretch",
     hide_index=True
 )
 
+
 # ============================================================
-# STRATEGIST
+# INVESTIGATE CATEGORY
+# ============================================================
+
+st.markdown(
+    '<div class="section-eyebrow">Decision Workspace</div>'
+    '<div class="section-title">🔬 Investigate a Category</div>'
+    '<div class="section-caption">'
+    'Move from the aggregate KPI to a specific business driver without inventing causal relationships.'
+    '</div>',
+    unsafe_allow_html=True
+)
+
+
+available_categories = (
+    diagnosis["product_category_name"]
+    .dropna()
+    .astype(str)
+    .tolist()
+)
+
+
+if available_categories:
+
+    selected_category = st.selectbox(
+        "Select a category to investigate",
+        available_categories,
+        index=0
+    )
+
+    selected_rows = diagnosis[
+        diagnosis["product_category_name"]
+        == selected_category
+    ]
+
+    if not selected_rows.empty:
+
+        selected = selected_rows.iloc[0]
+
+        selected_latest = selected[
+            "latest_revenue"
+        ]
+
+        selected_previous = selected[
+            "previous_revenue"
+        ]
+
+        selected_change = selected[
+            "revenue_change"
+        ]
+
+        selected_pct = selected[
+            "percentage_change"
+        ]
+
+        category_rank = (
+            diagnosis_valid[
+                diagnosis_valid["revenue_change"] < 0
+            ]
+            .sort_values("revenue_change")
+            .reset_index(drop=True)
+        )
+
+        rank_matches = category_rank[
+            category_rank["product_category_name"]
+            == selected_category
+        ]
+
+        if not rank_matches.empty:
+
+            decline_rank = (
+                rank_matches.index[0] + 1
+            )
+
+        else:
+
+            decline_rank = None
+
+        # Revenue contribution to total decline
+
+        total_decline = abs(
+            declining_categories["revenue_change"]
+            .sum()
+        )
+
+        if (
+            selected_change < 0
+            and total_decline > 0
+        ):
+
+            contribution = (
+                abs(selected_change)
+                / total_decline
+                * 100
+            )
+
+        else:
+
+            contribution = 0
+
+
+        st.markdown(
+            '<div class="investigation">',
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            f'<div class="investigation-title">'
+            f'Category Investigation — {selected_category}'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
+        m1, m2, m3, m4 = st.columns(4)
+
+        with m1:
+
+            st.markdown(f"""
+            <div class="evidence-box">
+            <div class="evidence-label">Latest Revenue</div>
+            <div class="investigation-value">
+            ₹{selected_latest:,.0f}
+            </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with m2:
+
+            st.markdown(f"""
+            <div class="evidence-box">
+            <div class="evidence-label">Revenue Change</div>
+            <div class="investigation-value">
+            ₹{selected_change:,.0f}
+            </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with m3:
+
+            pct_display = (
+                f"{selected_pct:.1f}%"
+                if pd.notna(selected_pct)
+                else "N/A"
+            )
+
+            st.markdown(f"""
+            <div class="evidence-box">
+            <div class="evidence-label">% Change</div>
+            <div class="investigation-value">
+            {pct_display}
+            </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with m4:
+
+            rank_display = (
+                f"#{decline_rank}"
+                if decline_rank is not None
+                else "—"
+            )
+
+            st.markdown(f"""
+            <div class="evidence-box">
+            <div class="evidence-label">Decline Rank</div>
+            <div class="investigation-value">
+            {rank_display}
+            </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        e1, e2 = st.columns(2)
+
+        with e1:
+
+            st.markdown(f"""
+            <div class="evidence-box">
+
+            <div class="evidence-label">
+            Evidence
+            </div>
+
+            <div class="evidence-text">
+
+            <b>Revenue:</b>
+            ₹{selected_previous:,.0f}
+            → ₹{selected_latest:,.0f}<br><br>
+
+            <b>Absolute impact:</b>
+            ₹{selected_change:,.0f}<br><br>
+
+            <b>Share of category decline:</b>
+            {contribution:.1f}%<br><br>
+
+            <b>Customer voice:</b>
+            {top_theme}
+
+            </div>
+
+            </div>
+            """, unsafe_allow_html=True)
+
+        with e2:
+
+            if selected_change < 0:
+
+                next_step = (
+                    f"Investigate {selected_category} first. "
+                    "Validate whether product, order or delivery "
+                    "issues are contributing before taking corrective action."
+                )
+
+            else:
+
+                next_step = (
+                    f"{selected_category} is not currently a declining "
+                    "category. Do not treat it as the primary cause "
+                    "of the revenue movement."
+                )
+
+            st.markdown(f"""
+            <div class="evidence-box">
+
+            <div class="evidence-label">
+            Recommended Next Step
+            </div>
+
+            <div class="evidence-text">
+
+            {next_step}
+
+            <br><br>
+
+            <b>Important:</b> Customer-review themes are measured "
+            "across the available review population. The current "
+            "pipeline does not establish a category-specific causal "
+            "relationship.
+
+            </div>
+
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown(
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+
+# ============================================================
+# EXHIBIT E — STRATEGIST
 # ============================================================
 
 st.markdown(
@@ -832,55 +1232,453 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
+st.markdown(f"""
+<div class="recommendation">
+
+<div class="recommendation-title">
+Recommended Next Step
+</div>
+
+<div class="recommendation-text">
+{strategy["recommendation"]}
+</div>
+
+<br>
+
+<span class="meta-label">
+Why
+</span>
+
+<br>
+
+{strategy["reason"]}
+
+<br><br>
+
+<span class="meta-label">
+Confidence
+</span>
+
+<br>
+
+{strategy["confidence"]}
+
+</div>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# PERSONA VIEWS
+# ============================================================
+
 st.markdown(
-    f"""
-    <div class="recommendation">
-        <div class="recommendation-title">Recommended Next Step</div>
-        <div class="recommendation-text">{strategy["recommendation"]}</div>
-        <br>
-        <span class="meta-label">Why</span><br>
-        {strategy["reason"]}
-        <br><br>
-        <span class="meta-label">Confidence</span><br>
-        {strategy["confidence"]}
-    </div>
-    """,
+    '<div class="section-eyebrow">Personalized Intelligence</div>'
+    '<div class="section-title">👥 Same Evidence, Different Decision Context</div>'
+    '<div class="section-caption">'
+    'The analytical truth stays fixed while the narrative changes according to decision rights.'
+    '</div>',
     unsafe_allow_html=True
 )
+
+
+persona = st.radio(
+    "View insight as",
+    [
+        "Executive",
+        "Analyst"
+    ],
+    horizontal=True
+)
+
+
+if persona == "Executive":
+
+    executive_text = (
+        f"Revenue moved {signal['latest_change']:.1f}% in "
+        f"{signal['latest_month']} and the movement is classified "
+        f"as {signal['signal'].lower()}. "
+    )
+
+    if not declining_categories.empty:
+
+        executive_text += (
+            f"The largest declining category is "
+            f"{top_category}, down "
+            f"{top_category_change:.1f}%. "
+        )
+
+    executive_text += (
+        "The recommended decision is to investigate the leading "
+        "driver before committing pricing, inventory or promotional resources."
+    )
+
+    st.markdown(f"""
+    <div class="agent">
+
+    <div class="exhibit-tag">
+    EXECUTIVE VIEW
+    </div>
+
+    <div class="agent-name">
+    What does leadership need to know?
+    </div>
+
+    <div class="agent-text">
+    {executive_text}
+    </div>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+else:
+
+    analyst_text = (
+        f"Signal z-score: {signal['z_score']:.2f}. "
+        f"Latest change: {signal['latest_change']:.2f}%. "
+        f"Historical mean: {signal['historical_mean']:.2f}%. "
+        f"Diagnostic evidence contains "
+        f"{len(diagnosis_valid)} comparable categories. "
+        f"Review evidence is currently summarized at aggregate theme level."
+    )
+
+    st.markdown(f"""
+    <div class="agent">
+
+    <div class="exhibit-tag">
+    ANALYST VIEW
+    </div>
+
+    <div class="agent-name">
+    What should be validated?
+    </div>
+
+    <div class="agent-text">
+    {analyst_text}
+    <br><br>
+    <b>Suggested validation:</b>
+    Examine category-level order volume, fulfillment performance,
+    pricing/mix and review evidence before asserting causality.
+    </div>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# ============================================================
+# DATA LINEAGE / SEMANTIC CONTRACT
+# ============================================================
+
+st.markdown(
+    '<div class="section-eyebrow">Governance</div>'
+    '<div class="section-title">🧾 KPI Contract & Lineage</div>'
+    '<div class="section-caption">'
+    'Every insight begins with deterministic data transformations before narrative generation.'
+    '</div>',
+    unsafe_allow_html=True
+)
+
+
+lineage_df = pd.DataFrame([
+    [
+        "Revenue",
+        "Σ item price by order/month",
+        "Orders + Items",
+        "Deterministic aggregation"
+    ],
+    [
+        "Orders",
+        "Count orders by month",
+        "Orders",
+        "Deterministic aggregation"
+    ],
+    [
+        "AOV",
+        "Revenue / Orders",
+        "Orders + Items",
+        "Deterministic calculation"
+    ],
+    [
+        "Customer Rating",
+        "Mean review score",
+        "Reviews + Orders",
+        "Deterministic aggregation"
+    ],
+    [
+        "Revenue Signal",
+        "Latest change vs historical distribution",
+        "Revenue KPI",
+        "Z-score statistical test"
+    ],
+    [
+        "Category Driver",
+        "Latest vs previous category revenue",
+        "Orders + Items + Products",
+        "Contribution analysis"
+    ]
+], columns=[
+    "KPI / Insight",
+    "Definition",
+    "Sources",
+    "Method"
+])
+
+
+st.dataframe(
+    lineage_df,
+    use_container_width="stretch",
+    hide_index=True
+)
+
+
+# ============================================================
+# METHOD DISCLOSURE
+# ============================================================
+
+with st.expander("⚙️ How the engine works"):
+
+    st.markdown("""
+    ### Analytical pipeline
+
+    **1. Deterministic data layer**
+    - Revenue calculated from order items.
+    - Orders counted from order records.
+    - AOV calculated from revenue / orders.
+    - Customer rating calculated from reviews.
+
+    **2. Signal Agent**
+    - Calculates month-over-month revenue movement.
+    - Compares the latest movement with historical changes.
+    - Uses a z-score to classify unusual movements.
+
+    **3. Diagnostic Agent**
+    - Compares category revenue between periods.
+    - Ranks declining categories.
+    - Separately summarizes negative customer-review themes.
+
+    **4. Strategist Agent**
+    - Converts the analytical evidence into a recommended next step.
+    - Does not create quantitative facts.
+
+    **5. Human decision**
+    - The recommendation remains reviewable and overridable.
+    - The engine explicitly avoids claiming causality where evidence is insufficient.
+
+    ### LLM vs non-LLM
+
+    **Non-LLM / deterministic:**
+    revenue, orders, AOV, review aggregation, percentage change,
+    category contribution, z-score and evidence ranking.
+
+    **Narrative / agent layer:**
+    Signal, Diagnostic and Strategist agents organize the evidence
+    and communicate it in decision-oriented language.
+
+    **Current prototype principle:**
+    The LLM/agent layer is not treated as the source of quantitative truth.
+    """)
+
+
+# ============================================================
+# DATA FRESHNESS
+# ============================================================
+
+st.markdown(
+    '<div class="section-eyebrow">Data Operations</div>'
+    '<div class="section-title">🕐 Source Freshness</div>',
+    unsafe_allow_html=True
+)
+
+
+source_df = pd.DataFrame([
+    [
+        "Orders",
+        f"{orders['order_purchase_timestamp'].max().date()}",
+        f"{len(orders):,}",
+        "Available"
+    ],
+    [
+        "Order Items",
+        "Linked to order records",
+        f"{len(items):,}",
+        "Available"
+    ],
+    [
+        "Products",
+        "Linked to product records",
+        f"{len(products):,}",
+        "Available"
+    ],
+    [
+        "Reviews",
+        "Linked to order records",
+        f"{len(reviews):,}",
+        "Available"
+    ]
+], columns=[
+    "Source",
+    "Latest Data",
+    "Rows",
+    "Status"
+])
+
+
+st.dataframe(
+    source_df,
+    use_container_width="stretch",
+    hide_index=True
+)
+
+
+# ============================================================
+# FEEDBACK LOOP
+# ============================================================
+
+st.markdown(
+    '<div class="section-eyebrow">Learning Loop</div>'
+    '<div class="section-title">✍️ Analyst Feedback</div>'
+    '<div class="section-caption">'
+    'Prototype mechanism for capturing corrections and overrides for future evaluation.'
+    '</div>',
+    unsafe_allow_html=True
+)
+
+
+feedback = st.radio(
+    "How useful was this recommendation?",
+    [
+        "Accept recommendation",
+        "Needs investigation",
+        "Override recommendation"
+    ],
+    horizontal=True
+)
+
+
+if feedback == "Override recommendation":
+
+    override_reason = st.text_input(
+        "Why are you overriding the recommendation?"
+    )
+
+else:
+
+    override_reason = ""
+
+
+if st.button("Record analyst decision"):
+
+    st.session_state["last_feedback"] = {
+        "decision": feedback,
+        "reason": override_reason,
+        "case_id": CASE_ID,
+        "timestamp": pd.Timestamp.now().isoformat()
+    }
+
+    st.success(
+        "Analyst decision recorded for this session. "
+        "In production, this event would be persisted to the feedback store."
+    )
+
+
+# ============================================================
+# TELEMETRY
+# ============================================================
+
+st.markdown(
+    '<div class="section-eyebrow">Runtime</div>'
+    '<div class="section-title">📊 Engine Telemetry</div>',
+    unsafe_allow_html=True
+)
+
+
+telemetry_cols = st.columns(4)
+
+with telemetry_cols[0]:
+
+    st.markdown(f"""
+    <div class="card">
+    <div class="card-label">PIPELINE LATENCY</div>
+    <div class="card-value">{pipeline_latency:.2f}s</div>
+    <div class="card-sub">data → recommendation</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+with telemetry_cols[1]:
+
+    st.markdown("""
+    <div class="card">
+    <div class="card-label">MODEL CALLS</div>
+    <div class="card-value">0</div>
+    <div class="card-sub">prototype uses deterministic agents</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+with telemetry_cols[2]:
+
+    st.markdown("""
+    <div class="card">
+    <div class="card-label">EST. LLM COST</div>
+    <div class="card-value">₹0</div>
+    <div class="card-sub">no external LLM call in current pipeline</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+with telemetry_cols[3]:
+
+    st.markdown(f"""
+    <div class="card">
+    <div class="card-label">EVIDENCE CONFIDENCE</div>
+    <div class="card-value">{evidence_confidence}</div>
+    <div class="card-sub">based on available evidence coverage</div>
+    </div>
+    """, unsafe_allow_html=True)
+
 
 # ============================================================
 # HUMAN IN THE LOOP
 # ============================================================
 
-st.markdown(
-    """
-    <div class="human">
-        <div class="human-title">✍️ Sign-off</div>
-        <div class="human-text">
-            The engine files evidence and a recommendation. It does not close the case —
-            that decision, and the accountability for it, stays with a human.
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown("""
+<div class="human">
+
+<div class="human-title">
+✍️ Human Sign-off
+</div>
+
+<div class="human-text">
+
+The engine detects, diagnoses and recommends — but it does not
+automatically execute business decisions. Quantitative evidence
+remains deterministic and traceable, while recommendations remain
+reviewable, overridable and accountable to a human decision-maker.
+
+</div>
+
+</div>
+""", unsafe_allow_html=True)
+
 
 # ============================================================
 # FOOTER
 # ============================================================
 
-st.markdown(
-    f"""
-    <br><br>
-    <div style="
-        text-align:center;
-        color:#5b6584;
-        font-family: 'IBM Plex Mono', monospace;
-        font-size:11px;
-        letter-spacing: 1px;
-    ">
-        KPI STORYTELLING ENGINE · CASE {CASE_ID} · EVIDENCE BEFORE ACTION
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown(f"""
+<br><br>
+
+<div style="
+text-align:center;
+color:#5b6584;
+font-family:'IBM Plex Mono',monospace;
+font-size:11px;
+letter-spacing:1px;
+">
+
+KPI STORYTELLING ENGINE · CASE {CASE_ID} · EVIDENCE BEFORE ACTION
+
+</div>
+""", unsafe_allow_html=True)
