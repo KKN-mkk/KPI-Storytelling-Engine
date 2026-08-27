@@ -995,28 +995,28 @@ available_categories = (
 
 if available_categories:
 
-   # Default to the largest declining category
-declining_names = (
-    declining_categories
-    .sort_values("revenue_change")
-    ["product_category_name"]
-    .astype(str)
-    .tolist()
-)
+    # Default to the largest declining category
+    declining_names = (
+        declining_categories
+        .sort_values("revenue_change")
+        ["product_category_name"]
+        .astype(str)
+        .tolist()
+    )
 
-default_category = (
-    declining_names[0]
-    if declining_names
-    else available_categories[0]
-)
+    default_category = (
+        declining_names[0]
+        if declining_names
+        else available_categories[0]
+    )
 
-default_index = available_categories.index(default_category)
+    default_index = available_categories.index(default_category)
 
-selected_category = st.selectbox(
-    "Select a category to investigate",
-    available_categories,
-    index=default_index
-)
+    selected_category = st.selectbox(
+        "Select a category to investigate",
+        available_categories,
+        index=default_index
+    )
 
     selected_rows = diagnosis[
         diagnosis["product_category_name"]
